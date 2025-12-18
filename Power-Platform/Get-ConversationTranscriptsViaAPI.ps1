@@ -13,8 +13,8 @@ function Get-ConversationTranscriptsViaAPI {
         [Parameter(Mandatory=$true, Position=3, HelpMessage="Enter your tenant domain (e.g., contoso.onmicrosoft.com)")]
         [string]$TenantDomain,
         
-        [Parameter(Mandatory=$false, HelpMessage="Specify additional fields to retrieve")]
-        [string[]]$FieldList="content,createdon,conversationtranscriptid,_bot_conversationtranscriptid_value,metadata",
+        [Parameter(Mandatory=$false, HelpMessage="Specify specific fields to retrieve. If not specified, all fields are returned.")]
+        [string[]]$FieldList,
 
         [Parameter(Mandatory=$false, HelpMessage="Start date for filtering conversation transcripts (format: yyyy-MM-dd)")]
         [datetime]$StartDate,
@@ -30,9 +30,32 @@ function Get-ConversationTranscriptsViaAPI {
             -ContentType 'application/x-www-form-urlencoded'
     }
     PROCESS {
-            #get list of conversation transcripts
-        $response=Invoke-RestMethod -Uri "https://$OrgUrl/api/data/v9.2/conversationtranscripts?`$select=$FieldList&`$filter=createdon ge $($StartDate.ToString("yyyy-MM-dd")) and createdon le $($EndDate.ToString("yyyy-MM-dd"))" `
-            -Headers @{Authorization = "Bearer $($token.access_token)"}
+        # Build the base URI
+        $baseUri = "https://$OrgUrl/api/data/v9.2/conversationtranscripts"
+        
+        # Build query parameters
+        $queryParams = @()
+        
+        # Add field selection if specified
+        if ($FieldList -and $FieldList.Count -gt 0) {
+            $fieldsString = $FieldList -join ','
+            $queryParams += "`$select=$fieldsString"
+        }
+        
+        # Add date filter if specified
+        if ($StartDate -and $EndDate) {
+            $queryParams += "`$filter=createdon ge $($StartDate.ToString("yyyy-MM-dd")) and createdon le $($EndDate.ToString("yyyy-MM-dd"))"
+        }
+        
+        # Construct full URI
+        if ($queryParams.Count -gt 0) {
+            $uri = "$baseUri`?$($queryParams -join '&')"
+        } else {
+            $uri = $baseUri
+        }
+        
+        # Get list of conversation transcripts
+        $response = Invoke-RestMethod -Uri $uri -Headers @{Authorization = "Bearer $($token.access_token)"}
     }
     END {
         return $response.value

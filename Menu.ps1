@@ -74,7 +74,8 @@ $menuCategories = [ordered]@{
         "Download Full Audit Logs from M365 Tenant"
     )
     "Compute" = @(
-        "Start Azure VMs"
+        "Start Azure VMs",
+        "Stop Azure VMs"
     )
     "Copilot" = @(
         "Get Conversation Transcripts Via API",
@@ -134,11 +135,11 @@ do {
     }
 
     $selectedItem = $menuLookup[[int]$choice]
-
+    write-host "Running $selectedItem..." -ForegroundColor Green
     # Switch statement for menu actions
     switch ($selectedItem) {
         "Download Copilot Audit Logs from M365 Tenant" { 
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             . "$workingDirectory\Copilot\Get-CopilotInteractionAuditLogItems.ps1"
             if (-not ($upn)) {
                 $upn = Read-Host "Enter your UPN"
@@ -151,7 +152,7 @@ do {
                     -Append
         }
         "Download Full Audit Logs from M365 Tenant"{
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             . "$workingDirectory\Compliance\Get-AuditLogResults.ps1"
             Get-AuditLogResults -StartDate $startDate `
                 -EndDate $endDate `
@@ -159,28 +160,28 @@ do {
                 -OutputPath "$outputDirectory\fullauditlog.csv"
         }
         "Download Azure Blob Files" { 
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             . "$workingDirectory\azure\Get-AzureBlobFiles.ps1" -StorageAccountName $storageAccountName `
                 -ContainerName $containerName `
                 -LocalPath $outputDirectory `
                 -ClearDestination
         }
         "Allow Azure Blob Storage Access" { 
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             . "$workingDirectory\azure\Set-AzureBlobStorageAccess.ps1"
             Set-AzureBlobStorageAccess -StorageAccountName $storageAccountName `
                 -ResourceGroupName $resourceGroupName `
                 -Enable
         }
         "Set Azure SQL Database Access" { 
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             . "$workingDirectory\azure\Set-AzureSQLServerAccess.ps1"
             Set-AzureSQLServerAccess -ServerName $SQLServerName `
                 -ResourceGroupName $SQLResourceGroupName 
         }
         "Start Azure Fabric Capacity" { 
             # Start Azure Fabric Capacity
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             . "$workingDirectory\azure\Set-FabricCapacityState.ps1"
                 Set-FabricCapacityState -ResourceGroupName $FabricResourceGroupName `
                     -FabricName $fabricName `
@@ -188,21 +189,27 @@ do {
         }
         "Stop Azure Fabric Capacity" { 
             # Pause Azure Fabric Capacity
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             . "$workingDirectory\azure\Set-FabricCapacityState.ps1"
                 Set-FabricCapacityState -ResourceGroupName $FabricResourceGroupName `
                     -FabricName $fabricName `
                     -State "Paused"
         }
         "Start Azure VMs" { 
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             . "$workingDirectory\azure\Start-AzureVMs.ps1"
             Start-AzureVMs -SubscriptionId $AzureSubscriptionId `
                 -ResourceGroupName $AzureVMResourceGroupName
         }
+        "Stop Azure VMs" { 
+            
+            . "$workingDirectory\azure\Stop-AzureVMs.ps1"
+            Stop-AzureVMs -SubscriptionId $AzureSubscriptionId `
+                -ResourceGroupName $AzureVMResourceGroupName
+        }
         "Get Conversation Transcripts Via API" {
             . "$workingDirectory\Power-Platform\Get-ConversationTranscriptsViaAPI.ps1"
-            write-host "Running $selectedItem..." -ForegroundColor Green
+            
             $transcriptData =Get-ConversationTranscriptsViaAPI -ClientId $PowerPlatClientId `
                 -ClientSecret $PowerPlatClientSecret `
                 -OrgUrl $PowerPlatOrgUrl `
@@ -245,7 +252,6 @@ do {
                 continue
             }
             . "$workingDirectory\Power-Platform\Get-AgentMessageConsumptionReport.ps1"
-            write-host "Running $selectedItem..." -ForegroundColor Green
             # export usage to csv
             $consumption | Export-Csv `
                 -Path "$outputDirectory\CopilotStudioCreditConsumptionReport-$startDate-$endDate.csv" `
@@ -259,18 +265,12 @@ do {
         "Get Copilot Agents Via API" {
             Remove-Item "$outputDirectory\bots.txt" -ErrorAction SilentlyContinue
             . "$workingDirectory\Power-Platform\Get-CopilotAgentsViaAPI.ps1"
-            $environments = Get-AdminPowerAppEnvironment
-            foreach ($env in $environments) {
-                $PowerPlatOrgUrl = $env.Internal.properties.linkedEnvironmentMetadata.instanceUrl -replace "https://", "" -replace "/", ""
-                if ($PowerPlatOrgUrl) {
-                    Get-CopilotAgentsViaAPI -ClientId $PowerPlatClientId `
-                    -ClientSecret $PowerPlatClientSecret `
-                    -OrgUrl $PowerPlatOrgUrl `
-                    -TenantDomain $PowerPlatTenantDomain `
-                    -FieldList "botid,componentidunique,applicationmanifestinformation,name,configuration,createdon,publishedon,_ownerid_value,_createdby_value,solutionid,modifiedon,_owninguser_value,schemaname,_modifiedby_value,_publishedby_value,authenticationmode,synchronizationstatus,ismanaged" `
-                    | out-file "$outputDirectory\bots.txt" -Append
-                }
-            }
+            Get-CopilotAgentsViaAPI -ClientId $PowerPlatClientId `
+                -ClientSecret $PowerPlatClientSecret `
+                -AllEnvironments `
+                -TenantDomain $PowerPlatTenantDomain `
+                -FieldList "botid,componentidunique,applicationmanifestinformation,name,configuration,createdon,publishedon,_ownerid_value,_createdby_value,solutionid,modifiedon,_owninguser_value,schemaname,_modifiedby_value,_publishedby_value,authenticationmode,synchronizationstatus,ismanaged" `
+                | out-file "$outputDirectory\bots.txt" -Append
         }
         "Exit" { 
             Write-Host "`nExiting the script. Goodbye!" -ForegroundColor Yellow

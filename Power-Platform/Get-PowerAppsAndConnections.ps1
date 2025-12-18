@@ -2,6 +2,7 @@
 
 function Get-PowerPlatformAppsAndConnections {
     BEGIN {
+        Add-PowerAppsAccount -Endpoint prod
         $environments=Get-AdminPowerAppEnvironment
         $powerAppsData=@()
     }
