@@ -3,3 +3,4 @@ Power-Platform/Get-AgentMessageConsumptionReport.ps1
 .env
 .vscode/settings.json
 Viva/Enable-VivaFeatures.ps1
+Misc/pst_calendar_extraction.ipynb

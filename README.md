@@ -94,6 +94,24 @@ $containerName = "yourcontainer"
 .\Azure\Get-AzureBlobFiles.ps1
 ```
 
+### [Get-CostReportsByResourceGroups.ps1](Azure/Get-CostReportsByResourceGroups.ps1)
+
+Retrieves cost reports for Azure resource groups for a specified date range using Azure Cost Management API. Allows selection of resource groups and provides detailed cost breakdown by resource type.
+
+#### Get-CostReportsByResourceGroups.ps1 Example
+
+```PowerShell
+# Get cost reports for the last 7 days with resource group selection prompt
+Get-AzureCostReportsByResourceGroups
+
+# Get cost reports for a specific date range
+Get-AzureCostReportsByResourceGroups -StartDate "2025-12-01" -EndDate "2025-12-17"
+
+# Specify subscription and output directory
+Get-AzureCostReportsByResourceGroups -SubscriptionId "your-subscription-id" `
+    -OutputDirectory "C:\temp\CostReports"
+```
+
 ### [Get-EntraGroupMembers.ps1](Azure/Get-EntraGroupMembers.ps1)
 
 Retrieves members of an Entra ID (Azure AD) group by name or email. Displays users, groups, and service principals with categorized output.
@@ -183,6 +201,14 @@ Stops Azure Virtual Machines across resource groups.
 Stop-AzureVMs -ResourceGroupName "<your resource group>" `
     -SubscriptionId "<your subscription id>"
 ```
+
+### [azure-maps-render-api.swagger.yaml](Azure/azure-maps-render-api.swagger.yaml)
+
+A Swagger 2.0/OpenAPI definition file for the Azure Maps Render API. This file describes the API endpoints for generating static map images with customizable pins, paths, and styling. Can be used to create a custom Power Platform connector to the Azure Maps API.
+
+#### azure-maps-render-api.swagger.yaml Example
+
+Import this file into Power Platform to create a custom connector, or use a Swagger UI viewer to visualize and interact with the API.
 
 ## Compliance
 
@@ -284,6 +310,34 @@ A Swagger/OpenAPI definition file for a Copilot retrieval API. This file describ
 
 Use a Swagger UI viewer to visualize and interact with the API defined in this file.
 
+### [copilot_usage_reports_api.ipynb](Copilot/copilot_usage_reports_api.ipynb)
+
+A Jupyter Notebook for retrieving Microsoft 365 Copilot usage reports via Microsoft Graph API using application permissions. Demonstrates authentication with client credentials and accessing Reports.Read.All API endpoints.
+
+#### copilot_usage_reports_api.ipynb Example
+
+Open the notebook in VS Code or Jupyter. Ensure your .env file contains:
+- `CopilotReportAPIPythonClient_Id`
+- `CopilotReportAPIPythonClient_Secret`
+- `CopilotAPIPythonClient_Tenant`
+
+Grant `Reports.Read.All` application permission in your Entra App Registration.
+
+### [meeting_insights_api.ipynb](Copilot/meeting_insights_api.ipynb)
+
+A Jupyter Notebook for retrieving Microsoft Teams meeting insights and transcripts using Microsoft Graph API with delegated user permissions. Demonstrates how to access meeting transcripts and AI-generated insights.
+
+#### meeting_insights_api.ipynb Example
+
+Open the notebook in VS Code or Jupyter. Configure your Entra App Registration with delegated permissions:
+- `User.Read`
+- `Calendars.Read`
+- `OnlineMeetings.Read`
+- `OnlineMeetingTranscript.Read.All`
+- `OnlineMeetingAiInsight.Read.All`
+
+Enable public client flow in your App Registration authentication settings.
+
 
 ### [Get-CopilotSharingAuditLogItems.ps1](Copilot/Get-CopilotSharingAuditLogItems.ps1)
 
@@ -349,20 +403,6 @@ Update-AADUserUPN -originalUpn "user@olddomain.com" `
 ```
 
 ## Misc
-
-### [ConvertTo-SharePointDriveId.ps1](Misc/ConvertTo-SharePointDriveId.ps1)
-
-Converts SharePoint site information to Drive IDs for Microsoft Graph API usage.
-
-#### ConvertTo-SharePointDriveId.ps1 Example
-
-```PowerShell
-# Set the SharePoint site URL
-
-ConvertTo-SharePointDriveId -siteId "<site GUID>" `
-    -webId "<web GUID>" `
-    -listId "<list GUID>"
-```
 
 ### [Get-SystemPerformanceAnalysis.ps1](Misc/Get-SystemPerformanceAnalysis.ps1)
 
@@ -620,6 +660,20 @@ $ownerEmails = "user1@yourdomain.com", "user2@yourdomain.com"
 
 # Run the script
 .\SharePoint-Online\Add-OwnersToSharePointSite.ps1 -SiteUrl $siteUrl -OwnerEmails $ownerEmails
+```
+
+### [ConvertTo-SharePointDriveId.ps1](SharePoint-Online/ConvertTo-SharePointDriveId.ps1)
+
+Converts SharePoint site information to Drive IDs for Microsoft Graph API usage.
+
+#### ConvertTo-SharePointDriveId.ps1 Example
+
+```PowerShell
+# Set the SharePoint site URL
+
+ConvertTo-SharePointDriveId -siteId "<site GUID>" `
+    -webId "<web GUID>" `
+    -listId "<list GUID>"
 ```
 
 ### [Get-CopilotAgentReport.ps1](SharePoint-Online/Get-CopilotAgentReport.ps1)
@@ -1280,4 +1334,19 @@ $moderationSettings = @{
 
 # Run the script
 .\Teams\Set-ChannelModerationSettings.ps1
+```
+
+### [Set-TeamsAppAvailability.ps1](Teams/Set-TeamsAppAvailability.ps1)
+
+Blocks a Teams app, making it unavailable to all users by modifying the app permission policy.
+
+#### Set-TeamsAppAvailability.ps1 Example
+
+```PowerShell
+# Block a Teams app using its App ID
+.\Teams\Set-TeamsAppAvailability.ps1 -AppId "12345678-1234-1234-1234-123456789012"
+
+# Block app with a custom policy name
+.\Teams\Set-TeamsAppAvailability.ps1 -AppId "12345678-1234-1234-1234-123456789012" `
+    -PolicyName "CustomPolicy"
 ```

@@ -1,0 +1,309 @@
+swagger: '2.0'
+info:
+  title: Azure Maps Render API
+  description: |
+    Azure Maps Render API provides static, rasterized map views of user-defined areas.
+    This API is suitable for lightweight web applications, limited bandwidth scenarios,
+    or embedding maps in applications outside of the browser, including backend services,
+    report generation, and desktop applications.
+    
+    Features include:
+    - Labeled pushpins in multiple styles
+    - Render circle, path, and polygon geometry types
+    - Multiple map styles (road, dark grey, imagery)
+    - Traffic layer overlay support
+    - Customizable dimensions and zoom levels
+    
+    For more information, see: https://learn.microsoft.com/en-us/azure/azure-maps/how-to-render-custom-data
+  version: '2024-04-01'
+  contact:
+    name: Azure Maps
+    url: https://learn.microsoft.com/en-us/rest/api/maps/
+  termsOfService: https://www.microsoft.com/legal/intellectualproperty/Trademarks/
+
+host: atlas.microsoft.com
+basePath: /
+schemes:
+  - https
+
+consumes:
+  - application/json
+
+produces:
+  - image/png
+  - image/jpeg
+  - application/json
+
+security:
+  - subscription-key: []
+  - AADToken: []
+  - SASToken: []
+
+paths:
+  /map/static:
+    get:
+      operationId: GetMapStaticImage
+      summary: Get Map Static Image
+      description: |
+        Produces static, rasterized map views of a user-defined area.
+        This API includes parameters for basic data visualization including labeled pushpins
+        and rendering of circle, path, and polygon geometry types.
+        
+        Note: Either center or bbox parameter must be supplied to the API.
+        The dimensions of the bbox parameter are constrained depending on the zoom level.
+      tags:
+        - Render
+      parameters:
+        - name: api-version
+          in: query
+          description: Version number of Azure Maps API
+          required: true
+          type: string
+          enum:
+            - '2024-04-01'
+          default: '2024-04-01'
+        
+        - name: tilesetId
+          in: query
+          description: Map style to be returned
+          required: false
+          type: string
+          enum:
+            - microsoft.base.road
+            - microsoft.base.darkgrey
+            - microsoft.imagery
+          default: microsoft.base.road
+        
+        - name: trafficLayer
+          in: query
+          description: Optional value indicating traffic flow overlay on the image result
+          required: false
+          type: string
+          enum:
+            - microsoft.traffic.relative.main
+            - none
+          default: none
+        
+        - name: zoom
+          in: query
+          description: |
+            Desired zoom level of the map. Support zoom value range from 0-20 (inclusive)
+            for tilesetId being microsoft.base.road or microsoft.base.darkgrey.
+            Support zoom value range from 0-19 (inclusive) for tilesetId being microsoft.imagery.
+            Default value is 12.
+          required: false
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 20
+          default: 12
+        
+        - name: center
+          in: query
+          description: |
+            Coordinates of the center point. Format: 'lon,lat'.
+            Longitude range: -180 to 180. Latitude range: -90 to 90.
+            Note: Either center or bbox are required parameters. They are mutually exclusive.
+          required: false
+          type: string
+          x-ms-summary: Center coordinates (lon,lat)
+        
+        - name: bbox
+          in: query
+          description: |
+            A bounding box defined by two latitudes and two longitudes that represent
+            the four sides of a rectangular area on the Earth.
+            Format: 'minLon,minLat,maxLon,maxLat' (in double).
+            Note: Either bbox or center are required parameters. They are mutually exclusive.
+            bbox shouldn't be used with height or width.
+          required: false
+          type: string
+          x-ms-summary: Bounding box (minLon,minLat,maxLon,maxLat)
+        
+        - name: height
+          in: query
+          description: |
+            Height of the resulting image in pixels. Range from 80 to 1500.
+            Default is 512. It shouldn't be used with bbox.
+          required: false
+          type: integer
+          format: int32
+          minimum: 80
+          maximum: 1500
+          default: 512
+        
+        - name: width
+          in: query
+          description: |
+            Width of the resulting image in pixels. Range from 80 to 2000.
+            Default is 512. It should not be used with bbox.
+          required: false
+          type: integer
+          format: int32
+          minimum: 80
+          maximum: 2000
+          default: 512
+        
+        - name: language
+          in: query
+          description: |
+            Language in which search results should be returned. Should be one of supported
+            IETF language tags, case insensitive.
+          required: false
+          type: string
+          x-ms-summary: Language code
+        
+        - name: view
+          in: query
+          description: |
+            The View parameter allows you to show the correct maps for a certain country/region
+            for geopolitically disputed regions.
+          required: false
+          type: string
+          enum:
+            - AE
+            - AR
+            - BH
+            - IN
+            - IQ
+            - JO
+            - KW
+            - LB
+            - MA
+            - OM
+            - PK
+            - PS
+            - QA
+            - SA
+            - SY
+            - US
+            - YE
+            - Auto
+            - Unified
+          default: Unified
+          x-ms-summary: Localized map view
+        
+        - name: pins
+          in: query
+          description: |
+            Pushpin style and instances. Use this parameter to optionally add pushpins to the image.
+            Example: default||-122.177621 47.613079||My Pin Label
+          required: false
+          type: string
+          x-ms-summary: Pushpin definitions
+        
+        - name: path
+          in: query
+          description: |
+            Path style and locations. Use this parameter to optionally add lines, polygons or circles.
+            Example: lc0000FF|lw3||-122.2 47.6|-122.1 47.7
+          required: false
+          type: string
+          x-ms-summary: Path definitions
+        
+        - name: x-ms-client-id
+          in: header
+          description: |
+            Azure Maps account client ID for Microsoft Entra ID authentication
+          required: false
+          type: string
+          x-ms-summary: Client ID
+        
+        - name: Accept
+          in: header
+          description: |
+            Media type for the response. Allowed values: image/jpeg, image/png
+          required: false
+          type: string
+          enum:
+            - image/png
+            - image/jpeg
+          default: image/png
+      
+      produces:
+        - image/png
+        - image/jpeg
+        - application/json
+      
+      responses:
+        '200':
+          description: Successfully retrieved map static image
+          schema:
+            type: file
+          headers:
+            Content-Type:
+              type: string
+              description: Content type of the response
+        
+        '400':
+          description: Bad Request - Invalid parameters
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        
+        '401':
+          description: Unauthorized - Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        
+        '403':
+          description: Forbidden - Insufficient permissions
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+
+
+securityDefinitions:
+  subscription-key:
+    type: apiKey
+    name: subscription-key
+    in: header
+    description: |
+      This is a shared key that is provisioned when creating an Azure Maps resource
+      through the Azure management plane via Azure portal, PowerShell, CLI, Azure SDKs,
+      or REST APIs.
+  
+  AADToken:
+    type: oauth2
+    flow: implicit
+    authorizationUrl: https://login.microsoftonline.com/common/oauth2/authorize
+    scopes:
+      https://atlas.microsoft.com/.default: Default scope for Azure Maps
+    description: |
+      Microsoft Entra OAuth 2.0 authentication. When paired with Azure role-based
+      access control it can be used to control access to Azure Maps REST APIs.
+  
+  SASToken:
+    type: apiKey
+    name: SASToken
+    in: header
+    description: |
+      Shared access signature token created from the List SAS operation
+      on the Azure Maps resource.
+
+definitions:
+  ErrorResponse:
+    type: object
+    description: Error response
+    properties:
+      error:
+        type: object
+        description: Error details
+        properties:
+          code:
+            type: string
+            description: The error code
+          message:
+            type: string
+            description: The error message
+          target:
+            type: string
+            description: The error target
+
+tags:
+  - name: Render
+    description: Azure Maps Render operations for static map image generation
+
