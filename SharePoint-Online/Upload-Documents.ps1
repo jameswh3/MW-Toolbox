@@ -5,39 +5,31 @@
 # - You must have permission to upload to the SharePoint sites
 
 # Example input array
-$documents = @(
-    @{
-        FilePath = "C:\temp\ProjectA Plan.docx"
-        SiteUrl = "https://contoso.sharepoint.com/sites/ProjectA"
-        Library = "Shared Documents"
-    },
-    @{
-        FilePath = "C:\temp\ProjectB Plan.docx"
-        SiteUrl = "https://contoso.sharepoint.com/sites/ProjectB"
-        Library = "Shared Documents"
-    }
-)
+$documents = get-childitem -Path "C:\temp\output"
+
+$siteUrl = "https://m365cpi89108028.sharepoint.com/sites/DemoData"
+$library = "Movies"
+
+Connect-PnPOnline -Url $siteUrl `
+            -ClientId $env.SHAREPOINT_ONLINE_CLIENT_ID `
+            -Tenant $env.SHAREPOINT_ONLINE_TENANT `
+            -CertificatePath $env.SHAREPOINT_ONLINE_CERTIFICATE_PATH
 
 foreach ($doc in $documents) {
-    $filePath = $doc.FilePath
-    $siteUrl = $doc.SiteUrl
-    $library = $doc.Library
+    $filePath = $doc.FullName
+
 
     if (Test-Path $filePath) {
         Write-Host "Uploading $filePath to $siteUrl/$library..."
 
-        # Connect to the SharePoint site
-        Connect-PnPOnline -Url $siteUrl `
-            -ClientId $ClientId `
-            -Tenant $Tenant `
-            -CertificatePath $CertificatePath
-
         # Upload the file to the specified library
         Add-PnPFile -Path $filePath -Folder $library
 
-        # Disconnect after upload
-        Disconnect-PnPOnline
+        
     } else {
         Write-Host "Skipping $filePath--file does not exist."
     }
 }
+
+# Disconnect after upload
+        Disconnect-PnPOnline

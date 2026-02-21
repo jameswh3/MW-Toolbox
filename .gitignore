@@ -4,3 +4,6 @@ Power-Platform/Get-AgentMessageConsumptionReport.ps1
 .vscode/settings.json
 Viva/Enable-VivaFeatures.ps1
 Misc/pst_calendar_extraction.ipynb
+Azure/Set-AzureKeyVaultNetworkAccess.ps1
+Misc/csv-to-word-documents.ipynb
+Misc/csv-to-word-documents-simplified.ipynb

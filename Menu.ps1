@@ -4,27 +4,8 @@ $startDate = (Get-Date).AddDays(-10).ToString("yyyy-MM-dd")
 $endDate = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
 $outputDirectory = "c:\temp"
 
-# Function to load .env file if environment variables are not set
-function Import-DotEnv {
-    param(
-        [string]$Path = (Join-Path $workingDirectory ".env")
-    )
-    
-    if (Test-Path $Path) {
-        Get-Content $Path | ForEach-Object {
-            if ($_ -match '^([^#][^=]+)=(.*)$') {
-                $name = $matches[1].Trim()
-                $value = $matches[2].Trim()
-                # Remove quotes if present
-                $value = $value -replace '^["'']|["'']$', ''
-                [Environment]::SetEnvironmentVariable($name, $value, [EnvironmentVariableTarget]::Process)
-            }
-        }
-        Write-Host "Loaded environment variables from .env file" -ForegroundColor Green
-    } else {
-        Write-Warning ".env file not found at $Path"
-    }
-}
+# Import the Import-DotEnv function
+. (Join-Path $workingDirectory "Import-DotEnv.ps1")
 
 # Load .env file if environment variables are not already set
 if (-not $env:UPN) {
@@ -62,6 +43,10 @@ $PowerPlatOrgUrl = $env:POWER_PLAT_ORG_URL
 $AzureSubscriptionId = $env:AZURE_SUBSCRIPTION_ID
 $AzureVMResourceGroupName = $env:AZURE_VM_RESOURCE_GROUP_NAME
 
+#Azure Key Vault Scripts
+$KeyVaultName = $env:KEY_VAULT_NAME
+$KeyValutResourceGroupName = $env:KEY_VAULT_RESOURCE_GROUP_NAME
+
 # PowerShell Menu Script Template with Categories
 
 #Trim trailing backslash from working directory, if it exists
@@ -69,6 +54,9 @@ $workingDirectory = $workingDirectory.TrimEnd('\')
 
 # Define menu items with categories
 $menuCategories = [ordered]@{
+    "Azure" = @(
+        "Enable Public Network Access to Azure Key Vault"
+    )
     "Compliance" = @(
         "Download Copilot Audit Logs from M365 Tenant",
         "Download Full Audit Logs from M365 Tenant"
@@ -206,6 +194,12 @@ do {
             . "$workingDirectory\azure\Stop-AzureVMs.ps1"
             Stop-AzureVMs -SubscriptionId $AzureSubscriptionId `
                 -ResourceGroupName $AzureVMResourceGroupName
+        }
+        "Enable Public Network Access to Azure Key Vault" {
+            . "$workingDirectory\azure\Set-AzureKeyVaultNetworkAccess.ps1"
+            Set-AzureKeyVaultNetworkAccess -ResourceGroupName $KeyValutResourceGroupName `
+                -KeyVaultName $KeyVaultName `
+                -AllowAllNetworks
         }
         "Get Conversation Transcripts Via API" {
             . "$workingDirectory\Power-Platform\Get-ConversationTranscriptsViaAPI.ps1"

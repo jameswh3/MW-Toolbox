@@ -388,6 +388,31 @@ $upn = "user@yourdomain.com"
 .\Entra\Get-EntraUserLicenseInfo.ps1
 ```
 
+### [New-EntraAppCertificate.ps1](Entra/New-EntraAppCertificate.ps1)
+
+Creates a self-signed certificate for Entra (Azure AD) app registration authentication. Generates both PFX (with private key) and CER (public key) files with configurable validity period. Optionally installs the certificate to CurrentUser or LocalMachine certificate store.
+
+#### New-EntraAppCertificate.ps1 Example
+
+```PowerShell
+# Create certificate with default settings (exports to C:\temp)
+.\Entra\New-EntraAppCertificate.ps1
+
+# Create certificate for specific app and install to CurrentUser store
+.\Entra\New-EntraAppCertificate.ps1 -SubjectName "CN=SharePoint Scripts" -InstallToStore
+
+# Create certificate with custom validity and install to LocalMachine (requires admin)
+.\Entra\New-EntraAppCertificate.ps1 -SubjectName "CN=MyApp" `
+    -ValidityYears 3 `
+    -InstallToStore `
+    -StoreLocation LocalMachine
+
+# Specify custom export location and certificate name
+.\Entra\New-EntraAppCertificate.ps1 -SubjectName "CN=MyApp" `
+    -ExportPath "C:\Certificates" `
+    -CertificateName "MyAppCert"
+```
+
 ### [Update-AzureADUserUPN.ps1](Entra/Update-AzureADUserUPN.ps1)
 
 Updates the User Principal Name (UPN) for Azure AD users.
@@ -454,18 +479,24 @@ $clientId = "your-app-registration-id"
 
 ### [Add-AppUserViaCLI.ps1](Power-Platform/Add-AppUserViaCLI.ps1)
 
-Adds users to Power Platform applications via CLI commands.
+Adds an application user to Power Platform environment(s) using the Power Platform CLI. Supports adding to a single environment or all environments in a tenant with a specified security role. Requires Power Platform CLI (pac) to be installed.
 
 #### Add-AppUserViaCLI.ps1 Example
 
 ```PowerShell
-# Set your parameters
-$orgUrl = "https://yourorg.crm.dynamics.com/"
-$role = "System Administrator"
-$appId = "your-app-registration-id"
+# Add app user to a specific environment
+.\Power-Platform\Add-AppUserViaCLI.ps1 -AppId "12345678-1234-1234-1234-123456789012" `
+    -OrgUrl "https://org.crm.dynamics.com"
 
-# Run the script
-.\Power-Platform\Add-AppUserViaCLI.ps1
+# Add app user to ALL environments in the tenant
+.\Power-Platform\Add-AppUserViaCLI.ps1 -AppId "12345678-1234-1234-1234-123456789012" `
+    -AllEnvironments
+
+# Use custom role and skip authentication
+.\Power-Platform\Add-AppUserViaCLI.ps1 -AppId "12345678-1234-1234-1234-123456789012" `
+    -OrgUrl "https://org.crm.dynamics.com" `
+    -Role "Basic User" `
+    -SkipAuth
 ```
 
 ### [ConvertFrom-AgentTranscript.ps1](Power-Platform/ConvertFrom-AgentTranscript.ps1)
@@ -975,6 +1006,19 @@ Get-UsersViaAPI -ClientId $clientId `
     -TenantDomain $tenantDomain `
     -FieldList "systemuserid,fullname,internalemailaddress,domainname,isdisabled,accessmode,createdon" `
     | Export-Csv -Path "C:\temp\users.csv" -NoTypeInformation
+```
+
+### [Set-NewPowerAppOwner.ps1](Power-Platform/Set-NewPowerAppOwner.ps1)
+
+Changes the owner of a Power App in a Power Platform environment. Automatically installs required Power Apps administration modules if not present.
+
+#### Set-NewPowerAppOwner.ps1 Example
+
+```PowerShell
+# Set the Power App ownership
+.\Power-Platform\Set-NewPowerAppOwner.ps1 -AppName "cd304785-1a9b-44c3-91a8-c4174b59d835" `
+    -EnvironmentName "de6b35af-dd3f-e14d-80ff-7a702c009100" `
+    -AppOwner "7eda74de-bd8b-ef11-ac21-000d3a5a9ee8"
 ```
 
 ## SharePoint
