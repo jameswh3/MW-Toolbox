@@ -3,17 +3,19 @@
 # Prerequisites:
 # - Install-Module -Name PnP.PowerShell
 # - You must have permission to upload to the SharePoint sites
+# - The certificate must be installed in the current user's or local machine's certificate store
+# - Set SHAREPOINT_ONLINE_CERTIFICATE_THUMBPRINT to the certificate thumbprint
 
 # Example input array
 $documents = get-childitem -Path "C:\temp\output"
 
-$siteUrl = "https://m365cpi89108028.sharepoint.com/sites/DemoData"
-$library = "Movies"
+$siteUrl = $env:SHAREPOINT_ONLINE_SITE
+$library = $env:SHAREPOINT_ONLINE_LIBRARY
 
 Connect-PnPOnline -Url $siteUrl `
-            -ClientId $env.SHAREPOINT_ONLINE_CLIENT_ID `
-            -Tenant $env.SHAREPOINT_ONLINE_TENANT `
-            -CertificatePath $env.SHAREPOINT_ONLINE_CERTIFICATE_PATH
+            -ClientId $env:SHAREPOINT_ONLINE_CLIENT_ID `
+            -Tenant $env:SHAREPOINT_ONLINE_TENANT_DOMAIN `
+            -Thumbprint $env:SHAREPOINT_ONLINE_CERTIFICATE_THUMBPRINT
 
 foreach ($doc in $documents) {
     $filePath = $doc.FullName

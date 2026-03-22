@@ -1,6 +1,6 @@
 # Configuration Variables used by multiple scripts
 $workingDirectory = (Get-Location).Path
-$startDate = (Get-Date).AddDays(-10).ToString("yyyy-MM-dd")
+$startDate = (Get-Date).AddDays(-3).ToString("yyyy-MM-dd")
 $endDate = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
 $outputDirectory = "c:\temp"
 
@@ -63,9 +63,11 @@ $menuCategories = [ordered]@{
     )
     "Compute" = @(
         "Start Azure VMs",
-        "Stop Azure VMs"
+        "Stop Azure VMs",
+        "Request JIT VM Access"
     )
     "Copilot" = @(
+        "Get Billing Plans Via API",
         "Get Conversation Transcripts Via API",
         "Get Copilot Agents Via API",
         "Get Copilot Consumption Report",
@@ -83,6 +85,7 @@ $menuCategories = [ordered]@{
         "Download Azure Blob Files"
     )
     "System" = @(
+        "Reload Environment Variables",
         "Exit"
     )
 }
@@ -195,11 +198,24 @@ do {
             Stop-AzureVMs -SubscriptionId $AzureSubscriptionId `
                 -ResourceGroupName $AzureVMResourceGroupName
         }
+        "Request JIT VM Access" {
+            . "$workingDirectory\Azure\Request-AzVMJitAccess.ps1"
+            Request-AzVMJitAccess -ResourceGroupName $AzureVMResourceGroupName `
+                -SubscriptionId $AzureSubscriptionId
+        }
         "Enable Public Network Access to Azure Key Vault" {
             . "$workingDirectory\azure\Set-AzureKeyVaultNetworkAccess.ps1"
             Set-AzureKeyVaultNetworkAccess -ResourceGroupName $KeyValutResourceGroupName `
                 -KeyVaultName $KeyVaultName `
                 -AllowAllNetworks
+        }
+        "Get Billing Plans Via API" {
+            . "$workingDirectory\Power-Platform\Get-BillingPlansViaAPI.ps1"
+            $billingPlans = Get-BillingPlansViaAPI -ClientId $PowerPlatClientId `
+                -ClientSecret $PowerPlatClientSecret `
+                -TenantDomain $PowerPlatTenantDomain
+            $billingPlans | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\billingplans.json"
+            Write-Host "Billing plans exported to $outputDirectory\billingplans.json" -ForegroundColor Green
         }
         "Get Conversation Transcripts Via API" {
             . "$workingDirectory\Power-Platform\Get-ConversationTranscriptsViaAPI.ps1"
@@ -265,6 +281,28 @@ do {
                 -TenantDomain $PowerPlatTenantDomain `
                 -FieldList "botid,componentidunique,applicationmanifestinformation,name,configuration,createdon,publishedon,_ownerid_value,_createdby_value,solutionid,modifiedon,_owninguser_value,schemaname,_modifiedby_value,_publishedby_value,authenticationmode,synchronizationstatus,ismanaged" `
                 | out-file "$outputDirectory\bots.txt" -Append
+        }
+        "Reload Environment Variables" {
+            Import-DotEnv
+            $tenantId = $env:TENANT_ID
+            $upn = $env:UPN
+            $storageAccountName = $env:STORAGE_ACCOUNT_NAME
+            $resourceGroupName = $env:RESOURCE_GROUP_NAME
+            $containerName = $env:CONTAINER_NAME
+            $SQLServerName = $env:SQL_SERVER_NAME
+            $SQLResourceGroupName = $env:SQL_RESOURCE_GROUP_NAME
+            $FabricResourceGroupName = $env:FABRIC_RESOURCE_GROUP_NAME
+            $fabricName = $env:FABRIC_NAME
+            $PowerPlatClientId = $env:POWER_PLAT_CLIENT_ID
+            $PowerPlatClientSecret = $env:POWER_PLAT_CLIENT_SECRET
+            $PowerPlatTenantDomain = $env:POWER_PLAT_TENANT_DOMAIN
+            $PowerPlatOrgUrl = $env:POWER_PLAT_ORG_URL
+            $AzureSubscriptionId = $env:AZURE_SUBSCRIPTION_ID
+            $AzureVMResourceGroupName = $env:AZURE_VM_RESOURCE_GROUP_NAME
+            $KeyVaultName = $env:KEY_VAULT_NAME
+            $KeyValutResourceGroupName = $env:KEY_VAULT_RESOURCE_GROUP_NAME
+            Write-Host "Environment variables reloaded." -ForegroundColor Green
+            Start-Sleep -Seconds 2
         }
         "Exit" { 
             Write-Host "`nExiting the script. Goodbye!" -ForegroundColor Yellow

@@ -7,3 +7,6 @@ Misc/pst_calendar_extraction.ipynb
 Azure/Set-AzureKeyVaultNetworkAccess.ps1
 Misc/csv-to-word-documents.ipynb
 Misc/csv-to-word-documents-simplified.ipynb
+Azure/Request-AzVMJitAccess.ps1
+Power-Platform/Diagnose-CopilotStudioMDCA.ps1
+Misc/salesforce_synthetic_data_generator.ipynb

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Pre-commit hook: clear outputs from staged Jupyter notebooks before committing.
+# Installed via scripts/install-hooks.ps1
+
+echo "Running pre-commit: clearing Jupyter notebook outputs..."
+
+# Prefer the project venv Python, fall back to system Python
+VENV_PYTHON=".venv/Scripts/python"
+if [ -f "$VENV_PYTHON" ]; then
+    PYTHON="$VENV_PYTHON"
+else
+    PYTHON="python"
+fi
+
+"$PYTHON" clear_notebook_outputs.py
+exit $?

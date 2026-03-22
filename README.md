@@ -46,11 +46,27 @@ The `.env-example` file includes configuration for:
 - **Fabric Scripts**: `FABRIC_RESOURCE_GROUP_NAME`, `FABRIC_NAME`
 - **Power Platform Scripts**: `POWER_PLAT_CLIENT_ID`, `POWER_PLAT_CLIENT_SECRET`, `POWER_PLAT_TENANT_DOMAIN`, `POWER_PLAT_ORG_URL`
 - **Azure VM Scripts**: `AZURE_SUBSCRIPTION_ID`, `AZURE_VM_RESOURCE_GROUP_NAME`
-- **SharePoint Online Scripts**: `SHAREPOINT_ONLINE_CLIENT_ID`, `SHAREPOINT_ONLINE_CERTIFICATE_PATH`, `SHAREPOINT_ONLINE_SITE_ID`, `SHAREPOINT_ONLINE_DRIVE_ID`, `SHAREPOINT_ONLINE_FOLDER_PATH`
+- **SharePoint Online Scripts**: `SHAREPOINT_ONLINE_CLIENT_ID`, `SHAREPOINT_ONLINE_CERTIFICATE_PATH`, `SHAREPOINT_ONLINE_CERTIFICATE_PASSWORD`, `SHAREPOINT_ONLINE_SITE_ID`, `SHAREPOINT_ONLINE_DRIVE_ID`, `SHAREPOINT_ONLINE_FOLDER_PATH`, `SHAREPOINT_ONLINE_ADMIN_URL`, `SHAREPOINT_ONLINE_SITE`, `SHAREPOINT_ONLINE_TENANT_DOMAIN`, `SHAREPOINT_ONLINE_LIBRARY`
+- **Salesforce Scripts**: `SF_AUTH_METHOD`, `SF_MY_DOMAIN`, `SF_API_BATCH_SIZE`, `SF_OUTPUT_DIR`, `SF_CLIENT_ID`, `SF_CLIENT_SECRET`, `SF_USERNAME`, `SF_PASSWORD`, `SF_SECURITY_TOKEN`
 
 > **Note**: The `.env` file is included in `.gitignore` to prevent accidentally committing sensitive credentials to version control.
 
 ## Root Scripts
+
+### [Import-DotEnv.ps1](Import-DotEnv.ps1)
+
+Provides a reusable `Import-DotEnv` function that loads environment variables from a `.env` file into the current PowerShell process. Used by other scripts in the toolbox to load configuration without hard-coding credentials.
+
+#### Import-DotEnv.ps1 Example
+
+```PowerShell
+# Dot-source the function and load variables from .env in the current directory
+. .\Import-DotEnv.ps1
+Import-DotEnv
+
+# Load from a specific path
+Import-DotEnv -Path "C:\MyProject\.env"
+```
 
 ### [Menu.ps1](Menu.ps1)
 
@@ -65,6 +81,27 @@ Central configuration file that sets up environment variables and common configu
 # Environment variables will be loaded from .env file if present
 # Variables include: UPN, TENANT_ID, STORAGE_ACCOUNT_NAME, etc.
 ```
+
+## Repository Tooling
+
+### [clear_notebook_outputs.py](clear_notebook_outputs.py)
+
+Python script invoked by the pre-commit hook to strip all cell outputs and execution counts from staged Jupyter notebooks before they are committed. Prevents binary output data and tokens from being stored in version control.
+
+### [install-hooks.ps1](install-hooks.ps1)
+
+One-time setup script that copies the `pre-commit` hook from the repo root into `.git/hooks/`. Run this after cloning the repository to activate automatic notebook output stripping on commit.
+
+#### install-hooks.ps1 Example
+
+```PowerShell
+# Run once after cloning
+.\install-hooks.ps1
+```
+
+### [pre-commit](pre-commit)
+
+Git pre-commit hook (shell script) kept in version control so it can be shared across clones. Calls `clear_notebook_outputs.py` against all staged `.ipynb` files and re-stages the cleaned files automatically. Install it with `install-hooks.ps1`.
 
 ## Azure
 
@@ -202,6 +239,23 @@ Stop-AzureVMs -ResourceGroupName "<your resource group>" `
     -SubscriptionId "<your subscription id>"
 ```
 
+### [Request-AzVMJitAccess.ps1](Azure/Request-AzVMJitAccess.ps1)
+
+Requests Just-In-Time (JIT) VM access for all VMs defined in a resource group's JIT network access policy. Automatically detects the caller's current public IP as the allowed source address. Requires the `Az.Security` module.
+
+#### Request-AzVMJitAccess.ps1 Example
+
+```PowerShell
+# Request JIT access for all VMs in a resource group (auto-detects public IP)
+Request-AzVMJitAccess -ResourceGroupName "rg-sharepoint-farm"
+
+# Specify subscription, duration, and source IP explicitly
+Request-AzVMJitAccess -ResourceGroupName "rg-sharepoint-farm" `
+    -SubscriptionId "your-subscription-id" `
+    -DurationHours 2 `
+    -SourceAddressPrefix "203.0.113.10"
+```
+
 ### [azure-maps-render-api.swagger.yaml](Azure/azure-maps-render-api.swagger.yaml)
 
 A Swagger 2.0/OpenAPI definition file for the Azure Maps Render API. This file describes the API endpoints for generating static map images with customizable pins, paths, and styling. Can be used to create a custom Power Platform connector to the Azure Maps API.
@@ -210,26 +264,15 @@ A Swagger 2.0/OpenAPI definition file for the Azure Maps Render API. This file d
 
 Import this file into Power Platform to create a custom connector, or use a Swagger UI viewer to visualize and interact with the API.
 
+### [azure-maps-render.ipynb](Azure/azure-maps-render.ipynb)
+
+A Jupyter Notebook demonstrating how to authenticate with Azure and call the Azure Maps Render API to generate static map images. Works in conjunction with the `azure-maps-render-api.swagger.yaml` definition file.
+
+#### azure-maps-render.ipynb Example
+
+Open the notebook in VS Code and run cells sequentially. Ensure your `.env` file contains the required Azure Maps credentials.
+
 ## Compliance
-
-### [ContentSearch.ps1](Compliance/ContentSearch.ps1)
-
-Performs a compliance content search and exports the results.
-
-#### ContentSearch.ps1 Example
-
-```PowerShell
-# Set your search parameters
-$upn="admin@domain.com"
-$complianceSearchName = "MyContentSearch"
-$mailbox = "<mailbox email address>"
-$startDate="2025-02-20"
-$endDate="2025-02-22"
-$kql="Subject:`"`" AND sent>=$startDate AND sent<=$endDate"
-
-# Run the script
-.\Compliance\ContentSearch.ps1
-```
 
 ### [Get-AllRetentionPoliciesAndRules.ps1](Compliance/Get-AllRetentionPoliciesAndRules.ps1)
 
@@ -258,6 +301,25 @@ $endDate = "2025-06-24"
 
 # Run the script
 .\Compliance\Get-AuditLogResults.ps1
+```
+
+### [New-ContentSearch.ps1](Compliance/New-ContentSearch.ps1)
+
+Creates a compliance content search in Microsoft 365, waits for it to complete, then exports the results. Supports searching specific mailboxes or all mailboxes using a KQL query. Monitors both the search and export operations until completion.
+
+#### New-ContentSearch.ps1 Example
+
+```PowerShell
+# Search a specific mailbox for emails with "confidential" in the subject
+New-ContentSearch -SearchName "Investigation001" `
+    -Query "subject:confidential" `
+    -Mailbox "user@contoso.com"
+
+# Search all mailboxes for Q4 2025 content
+New-ContentSearch -SearchName "Q4Search" `
+    -Query "date>=2025-10-01" `
+    -Mailbox "All" `
+    -UserPrincipalName "admin@contoso.com"
 ```
 
 ## Copilot
@@ -317,6 +379,7 @@ A Jupyter Notebook for retrieving Microsoft 365 Copilot usage reports via Micros
 #### copilot_usage_reports_api.ipynb Example
 
 Open the notebook in VS Code or Jupyter. Ensure your .env file contains:
+
 - `CopilotReportAPIPythonClient_Id`
 - `CopilotReportAPIPythonClient_Secret`
 - `CopilotAPIPythonClient_Tenant`
@@ -330,6 +393,7 @@ A Jupyter Notebook for retrieving Microsoft Teams meeting insights and transcrip
 #### meeting_insights_api.ipynb Example
 
 Open the notebook in VS Code or Jupyter. Configure your Entra App Registration with delegated permissions:
+
 - `User.Read`
 - `Calendars.Read`
 - `OnlineMeetings.Read`
@@ -338,6 +402,18 @@ Open the notebook in VS Code or Jupyter. Configure your Entra App Registration w
 
 Enable public client flow in your App Registration authentication settings.
 
+### [copilot_packages_api.ipynb](Copilot/copilot_packages_api.ipynb)
+
+A Jupyter Notebook for listing Copilot packages available in the tenant catalog via the Microsoft Graph beta API (`/copilot/admin/catalog/packages`). Supports optional OData `$filter` parameters to filter by supported host, element type, or last modified date. Displays results as both raw JSON and a formatted summary table.
+
+#### copilot_packages_api.ipynb Example
+
+Open the notebook in VS Code. Ensure your `.env` file contains:
+
+- `CopilotAPIPythonClient_Id`
+- `CopilotAPIPythonClient_Tenant`
+
+Grant `CopilotPackages.ReadWrite.All` delegated permission (with admin consent) in your Entra App Registration. Enable public client flow in your App Registration authentication settings.
 
 ### [Get-CopilotSharingAuditLogItems.ps1](Copilot/Get-CopilotSharingAuditLogItems.ps1)
 
@@ -440,6 +516,60 @@ Analyzes system performance metrics and provides detailed performance insights.
 .\Misc\Get-SystemPerformanceAnalysis.ps1
 ```
 
+### [Update-InstalledModules.ps1](Misc/Update-InstalledModules.ps1)
+
+Inventories all PowerShell modules installed via PowerShellGet/PSGallery, checks for available updates, and optionally applies them. Displays a formatted report showing installed vs. latest versions and a summary of update status. Untrusted repository prompts are automatically suppressed since the user is making an explicit approval decision within the script itself.
+
+When run interactively, each outdated module presents a streamlined prompt:
+
+- **Y** — update this module, continue prompting for remaining modules
+- **A** — update this module and all remaining modules without further prompting
+- **N** — skip this module
+- **Q** — quit the update loop
+
+#### Update-InstalledModules.ps1 Example
+
+```PowerShell
+# Show inventory and prompt before updating each outdated module (Y/A/N/Q per module)
+.\Misc\Update-InstalledModules.ps1
+
+# Display inventory report only — no changes made
+.\Misc\Update-InstalledModules.ps1 -InventoryOnly
+
+# Automatically update all outdated modules without prompting
+.\Misc\Update-InstalledModules.ps1 -UpdateAll
+
+# Update all modules in the AllUsers scope, excluding specific modules
+.\Misc\Update-InstalledModules.ps1 -UpdateAll -Scope AllUsers -ExcludeModules @('Az', 'AzureAD')
+
+# Dry-run to see what would be updated without applying changes
+.\Misc\Update-InstalledModules.ps1 -UpdateAll -WhatIf
+```
+
+### [Update-RDCManFile.ps1](Misc/Update-RDCManFile.ps1)
+
+Imports `.rdp` files from a source folder into an existing Remote Desktop Connection Manager (RDCMan) `.rdg` file, creating or updating server entries under a dedicated group. Reads usernames and domain information from each `.rdp` file and writes them into the RDCMan `logonCredentials` element. Configured via `.env` variables: `RDCMAN_SOURCE_PATH`, `RDCMAN_DESTINATION_PATH`, `RDCMAN_RDG_FILENAME`, `RDCMAN_GROUP_NAME`.
+
+#### Update-RDCManFile.ps1 Example
+
+```PowerShell
+# Import .rdp files using .env defaults
+.\Misc\Update-RDCManFile.ps1
+
+# Preview changes without writing to the .rdg file
+.\Misc\Update-RDCManFile.ps1 -WhatIf
+
+# Specify paths explicitly
+.\Misc\Update-RDCManFile.ps1 -SourcePath "C:\RDPFiles" `
+    -DestinationPath "C:\Users\you\Documents" `
+    -RdgFileName "mylab.rdg" `
+    -GroupName "Lab Servers"
+```
+
+### [salesforce_synthetic_data_generator.ipynb](Misc/salesforce_synthetic_data_generator.ipynb)
+
+Legacy location of the Salesforce Synthetic Data Generator notebook. See the primary version in the [Salesforce/](Salesforce/) folder.
+
 
 ## MsGraph
 
@@ -520,6 +650,25 @@ Retrieves information about all data policy connectors in the Power Platform ten
 ```PowerShell
 # Run the script directly - it handles authentication and data retrieval
 Get-AllDataPolicyConnectorInfo | Export-Csv -Path "C:\temp\PowerPlatformDataPolicyConnectors.csv" -NoTypeInformation -Force
+```
+
+### [Get-BillingPlansViaAPI.ps1](Power-Platform/Get-BillingPlansViaAPI.ps1)
+
+Retrieves all billing policies for a Power Platform tenant via the Power Platform Licensing REST API. Handles pagination automatically.
+
+#### Get-BillingPlansViaAPI.ps1 Example
+
+```PowerShell
+# Get all billing policies
+Get-BillingPlansViaAPI -ClientId "your-client-id" `
+    -ClientSecret "your-secret" `
+    -TenantDomain "contoso.onmicrosoft.com"
+
+# Limit results per page
+Get-BillingPlansViaAPI -ClientId "your-client-id" `
+    -ClientSecret "your-secret" `
+    -TenantDomain "contoso.onmicrosoft.com" `
+    -Top 10
 ```
 
 ### [Get-BotComponentsViaAPI.ps1](Power-Platform/Get-BotComponentsViaAPI.ps1)
@@ -663,351 +812,6 @@ $tenantDomain = "<your tenant domain>.onmicrosoft.com"
 .\Power-Platform\Get-UsersViaAPI.ps1 -ClientId $clientId -ClientSecret $clientSecret -OrgUrl $orgUrl -TenantDomain $tenantDomain
 ```
 
-## SharePoint
-
-### [Inventory-SPFarm.ps1](SharePoint/Inventory-SPFarm.ps1)
-
-Performs an inventory of a SharePoint farm. This is for on-premises SharePoint environments.
-
-#### Inventory-SPFarm.ps1 Example
-
-```PowerShell
-# Run the script to start the inventory process
-.\SharePoint\Inventory-SPFarm.ps1 -FarmConfigDatabase "SP_Config"
-```
-
-## SharePoint-Online
-
-### [Add-OwnersToSharePointSite.ps1](SharePoint-Online/Add-OwnersToSharePointSite.ps1)
-
-Adds owners to a SharePoint Online site.
-
-#### Add-OwnersToSharePointSite.ps1 Example
-
-```PowerShell
-# Set your parameters
-$siteUrl = "https://yourtenant.sharepoint.com/sites/YourSite"
-$ownerEmails = "user1@yourdomain.com", "user2@yourdomain.com"
-
-# Run the script
-.\SharePoint-Online\Add-OwnersToSharePointSite.ps1 -SiteUrl $siteUrl -OwnerEmails $ownerEmails
-```
-
-### [ConvertTo-SharePointDriveId.ps1](SharePoint-Online/ConvertTo-SharePointDriveId.ps1)
-
-Converts SharePoint site information to Drive IDs for Microsoft Graph API usage.
-
-#### ConvertTo-SharePointDriveId.ps1 Example
-
-```PowerShell
-# Set the SharePoint site URL
-
-ConvertTo-SharePointDriveId -siteId "<site GUID>" `
-    -webId "<web GUID>" `
-    -listId "<list GUID>"
-```
-
-### [Get-CopilotAgentReport.ps1](SharePoint-Online/Get-CopilotAgentReport.ps1)
-
-Generates a report on Copilot agents in SharePoint Online.
-
-#### Get-CopilotAgentReport.ps1 Example
-
-```PowerShell
-# Run the script to generate the report
-.\SharePoint-Online\Get-CopilotAgentReport.ps1 -OutputDirectory "C:\temp\Reports"
-```
-
-### [Get-GraphDeltaQueryResults.ps1](SharePoint-Online/Get-GraphDeltaQueryResults.ps1)
-
-Retrieves results from a Microsoft Graph delta query, which can be used to track changes to SharePoint Online resources.
-
-#### Get-GraphDeltaQueryResults.ps1 Example
-
-```PowerShell
-# Run the script with your delta query parameters
-.\SharePoint-Online\Get-GraphDeltaQueryResults.ps1 -DeltaLink "your_delta_link"
-```
-
-### [Get-SharePointAgentCreationAuditLogItems.ps1](SharePoint-Online/Get-SharePointAgentCreationAuditLogItems.ps1)
-
-Retrieves audit log items related to the creation of SharePoint agents.
-
-#### Get-SharePointAgentCreationAuditLogItems.ps1 Example
-
-```PowerShell
-# Set your parameters
-$upn = "admin@yourdomain.com"
-$startDate = "2025-06-01"
-$endDate = "2025-06-24"
-
-# Run the script
-.\SharePoint-Online\Get-SharePointAgentCreationAuditLogItems.ps1 -StartDate $startDate -EndDate $endDate -UserPrincipalName $upn
-```
-
-### [Get-SharePointAgentInteractionAuditLogItems.ps1](SharePoint-Online/Get-SharePointAgentInteractionAuditLogItems.ps1)
-
-Retrieves audit log items for SharePoint agent interactions.
-
-#### Get-SharePointAgentInteractionAuditLogItems.ps1 Example
-
-```PowerShell
-# Set your parameters
-$upn = "admin@yourdomain.com"
-$startDate = "2025-06-01"
-$endDate = "2025-06-24"
-
-# Run the script
-.\SharePoint-Online\Get-SharePointAgentInteractionAuditLogItems.ps1 -StartDate $startDate -EndDate $endDate -UserPrincipalName $upn
-```
-
-### [Get-SharePointFileProperties.ps1](SharePoint-Online/Get-SharePointFileProperties.ps1)
-
-Retrieves properties of files in a SharePoint Online document library.
-
-#### Get-SharePointFileProperties.ps1 Example
-
-```PowerShell
-# Set your parameters
-$siteUrl = "https://yourtenant.sharepoint.com/sites/YourSite"
-$libraryName = "Documents"
-
-# Run the script
-.\SharePoint-Online\Get-SharePointFileProperties.ps1 -SiteUrl $siteUrl -LibraryName $libraryName
-```
-
-### [New-DemoProjectHubSites.ps1](SharePoint-Online/New-DemoProjectHubSites.ps1)
-
-Creates new hub sites for a demo project in SharePoint Online.
-
-#### New-DemoProjectHubSites.ps1 Example
-
-```PowerShell
-# Run the script to create the demo hub sites
-.\SharePoint-Online\New-DemoProjectHubSites.ps1
-```
-
-### [New-DemoProjectPlanDocs.ps1](SharePoint-Online/New-DemoProjectPlanDocs.ps1)
-
-Creates new project plan documents for a demo in SharePoint Online.
-
-#### New-DemoProjectPlanDocs.ps1 Example
-
-```PowerShell
-# Run the script to create the demo documents
-.\SharePoint-Online\New-DemoProjectPlanDocs.ps1
-```
-
-### [New-HubSites.ps1](SharePoint-Online/New-HubSites.ps1)
-
-Creates new hub sites in SharePoint Online.
-
-#### New-HubSites.ps1 Example
-
-```PowerShell
-# Run the script to create new hub sites
-.\SharePoint-Online\New-HubSites.ps1 -HubSiteNames "HR", "IT", "Finance"
-```
-
-### [New-OneDriveSites.ps1](SharePoint-Online/New-OneDriveSites.ps1)
-
-Provisions new OneDrive for Business sites for users.
-
-#### New-OneDriveSites.ps1 Example
-
-```PowerShell
-# Set the user emails
-$userEmails = "user1@yourdomain.com", "user2@yourdomain.com"
-
-# Run the script
-.\SharePoint-Online\New-OneDriveSites.ps1 -UserEmails $userEmails
-```
-
-### [Set-SPOOrgAssetLibrary.ps1](SharePoint-Online/Set-SPOOrgAssetLibrary.ps1)
-
-Designates a SharePoint Online document library as an organization assets library.
-
-#### Set-SPOOrgAssetLibrary.ps1 Example
-
-```PowerShell
-# Set your parameters
-$libraryUrl = "https://yourtenant.sharepoint.com/sites/branding/logos"
-
-# Run the script
-.\SharePoint-Online\Set-SPOOrgAssetLibrary.ps1 -LibraryUrl $libraryUrl
-```
-
-### [Upload-Documents.ps1](SharePoint-Online/Upload-Documents.ps1)
-
-Uploads documents to a SharePoint Online document library.
-
-#### Upload-Documents.ps1 Example
-
-```PowerShell
-# Set your parameters
-$siteUrl = "https://yourtenant.sharepoint.com/sites/YourSite"
-$libraryName = "Documents"
-$sourceFolder = "C:\temp\Upload"
-
-# Run the script
-.\SharePoint-Online\Upload-Documents.ps1 -SiteUrl $siteUrl -LibraryName $libraryName -SourceFolder $sourceFolder
-```
-
-## SQL
-
-### [TableSchemaToJSON.sql](SQL/TableSchemaToJSON.sql)
-
-A SQL script that converts a table schema to a JSON format.
-
-#### TableSchemaToJSON.sql Example
-
-```sql
--- Execute this script in your SQL management tool against your database.
--- It will output the schema of a specified table as JSON.
-```
-
-## Teams
-
-### [Get-AllTeamsMeetingPolicies.ps1](Teams/Get-AllTeamsMeetingPolicies.ps1)
-
-Retrieves all Microsoft Teams meeting policies.
-
-#### Get-AllTeamsMeetingPolicies.ps1 Example
-
-```PowerShell
-# Run the script to get all meeting policies
-.\Teams\Get-AllTeamsMeetingPolicies.ps1 | Export-Csv -Path "C:\temp\TeamsMeetingPolicies.csv" -NoTypeInformation
-```
-
-### [Get-AllTeamsViaGraph.ps1](Teams/Get-AllTeamsViaGraph.ps1)
-
-Retrieves a list of all teams in the organization using Microsoft Graph.
-
-#### Get-AllTeamsViaGraph.ps1 Example
-
-```PowerShell
-# Run the script to get all teams
-.\Teams\Get-AllTeamsViaGraph.ps1
-```
-
-### [Get-ChannelMessages.ps1](Teams/Get-ChannelMessages.ps1)
-
-Retrieves messages from a specific Microsoft Teams channel.
-
-#### Get-ChannelMessages.ps1 Example
-
-```PowerShell
-# Set your parameters
-$teamId = "your-team-id"
-$channelId = "your-channel-id"
-
-# Run the script
-.\Teams\Get-ChannelMessages.ps1 -TeamId $teamId -ChannelId $channelId
-```
-
-### [Get-TeamsAndMembers.ps1](Teams/Get-TeamsAndMembers.ps1)
-
-Retrieves all teams and their members.
-
-#### Get-TeamsAndMembers.ps1 Example
-
-```PowerShell
-# Run the script to get teams and members
-.\Teams\Get-TeamsAndMembers.ps1 | Export-Csv -Path "C:\temp\TeamsAndMembers.csv" -NoTypeInformation
-```
-
-### [Get-UserTeams.ps1](Teams/Get-UserTeams.ps1)
-
-Retrieves the teams that a specific user is a member of.
-
-#### Get-UserTeams.ps1 Example
-
-```PowerShell
-# Set the user UPN
-$upn = "user@yourdomain.com"
-
-# Run the script
-.\Teams\Get-UserTeams.ps1 -UserPrincipalName $upn
-```
-
-### [New-Channels.ps1](Teams/New-Channels.ps1)
-
-Creates new channels in a Microsoft Team.
-
-#### New-Channels.ps1 Example
-
-```PowerShell
-# Set your parameters
-$teamId = "your-team-id"
-$channelNames = "General", "Announcements", "Project-X"
-
-# Run the script
-.\Teams\New-Channels.ps1 -TeamId $teamId -ChannelNames $channelNames
-```
-
-### [New-Teams.ps1](Teams/New-Teams.ps1)
-
-Creates new teams in Microsoft Teams.
-
-#### New-Teams.ps1 Example
-
-```PowerShell
-# Run the script to create new teams
-.\Teams\New-Teams.ps1 -TeamNames "Marketing Team", "Sales Team"
-```
-
-### [Set-ChannelModerationSettings.ps1](Teams/Set-ChannelModerationSettings.ps1)
-
-Configures moderation settings for a Microsoft Teams channel.
-
-#### Set-ChannelModerationSettings.ps1 Example
-
-```PowerShell
-# Set your parameters
-$teamId = "your-team-id"
-$channelId = "your-channel-id"
-
-# Run the script
-.\Teams\Set-ChannelModerationSettings.ps1 -TeamId $teamId -ChannelId $channelId -EnableModeration $true
-```
-
-### [Get-PowerPlatTenantSettingsViaAPI.ps1](Power-Platform/Get-PowerPlatTenantSettingsViaAPI.ps1)
-
-Retrieves information about Power Platform Environments.
-
-#### Get-PowerPlatTenantSettingsViaAPI.ps1 Example
-
-```PowerShell
-#Modify the following variables with your own values
-    $clientId="<your client id>"
-    $clientSecret="<your client secret>"
-    $tenantDomain="<your tenant>.onmicrosoft.com>"
-
-    .\Power-Platform\Get-PowerPlatTenantSettingsViaAPI.ps1
-```
-
-### [Get-UsersViaAPI.ps1](Power-Platform/Get-UsersViaAPI.ps1)
-
-Retrieves user information via Power Platform APIs.
-
-#### Get-UsersViaAPI.ps1 Example
-
-```PowerShell
-# Set your environment parameters
-$clientId = "<your client id>"
-$clientSecret = "<your client secret>"
-$orgUrl = "<your org>.crm.dynamics.com"
-$tenantDomain = "<your tenant domain>.onmicrosoft.com"
-
-# Run the script
-Get-UsersViaAPI -ClientId $clientId `
-    -ClientSecret $clientSecret `
-    -OrgUrl $orgUrl `
-    -TenantDomain $tenantDomain `
-    -FieldList "systemuserid,fullname,internalemailaddress,domainname,isdisabled,accessmode,createdon" `
-    | Export-Csv -Path "C:\temp\users.csv" -NoTypeInformation
-```
-
 ### [Set-NewPowerAppOwner.ps1](Power-Platform/Set-NewPowerAppOwner.ps1)
 
 Changes the owner of a Power App in a Power Platform environment. Automatically installs required Power Apps administration modules if not present.
@@ -1015,7 +819,6 @@ Changes the owner of a Power App in a Power Platform environment. Automatically 
 #### Set-NewPowerAppOwner.ps1 Example
 
 ```PowerShell
-# Set the Power App ownership
 .\Power-Platform\Set-NewPowerAppOwner.ps1 -AppName "cd304785-1a9b-44c3-91a8-c4174b59d835" `
     -EnvironmentName "de6b35af-dd3f-e14d-80ff-7a702c009100" `
     -AppOwner "7eda74de-bd8b-ef11-ac21-000d3a5a9ee8"
@@ -1064,14 +867,6 @@ Inventory-SPFarm `
 
 SQL query that converts a table schema to JSON format, useful for documentation and schema analysis. Can be used in agent instructions to tell the agent how the tables are structured.
 
-## Swagger Files
-
-### [copilot-retrieval-api.swagger.yaml](Swagger%20Files/copilot-retrieval-api.swagger.yaml)
-
-OpenAPI/Swagger specification for the Copilot Retrieval API, for use when building custom connectors for Power Platform.
-
-
-
 ## SharePoint-Online
 
 ### [Add-OwnersToSharePointSite.ps1](SharePoint-Online/Add-OwnersToSharePointSite.ps1)
@@ -1094,6 +889,20 @@ Add-OwnersToSharePointSite -SiteUrl $siteUrl `
     -ClientId $clientId `
     -Tenant $tenant `
     -CertificatePath $certificatePath
+```
+
+### [ConvertTo-SharePointDriveId.ps1](SharePoint-Online/ConvertTo-SharePointDriveId.ps1)
+
+Converts SharePoint Site ID, Web ID, and List ID GUIDs into the base64-encoded Drive ID format used by the Microsoft Graph API. Useful for constructing Graph API calls that reference SharePoint document libraries.
+
+#### ConvertTo-SharePointDriveId.ps1 Example
+
+```PowerShell
+# Convert GUIDs to a Graph API Drive ID
+ConvertTo-SharePointDriveId `
+    -siteId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" `
+    -webId  "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" `
+    -listId "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
 ```
 
 ### [Get-CopilotAgentReport.ps1](SharePoint-Online/Get-CopilotAgentReport.ps1)
@@ -1394,3 +1203,25 @@ Blocks a Teams app, making it unavailable to all users by modifying the app perm
 .\Teams\Set-TeamsAppAvailability.ps1 -AppId "12345678-1234-1234-1234-123456789012" `
     -PolicyName "CustomPolicy"
 ```
+
+## Salesforce
+
+### [salesforce_synthetic_data_generator.ipynb](Salesforce/salesforce_synthetic_data_generator.ipynb)
+
+A Jupyter Notebook that dynamically generates realistic synthetic Salesforce **Account**, **Opportunity**, and **Case** records for testing, development, and demo purposes, then inserts them directly into Salesforce via the REST API. Records are relationally linked — Opportunities and Cases reference valid Account IDs returned from the Account inserts. Supports both **Username/Password** and **OAuth 2.0 Client Credentials** authentication. Data can also be exported locally as CSV, JSON, or a multi-sheet Excel workbook without inserting into Salesforce.
+
+#### salesforce_synthetic_data_generator.ipynb Example
+
+Open the notebook in VS Code. Ensure your `.env` file contains the Salesforce credentials for your chosen auth method:
+
+**Option A — Username/Password:**
+- `SF_AUTH_METHOD=password`
+- `SF_USERNAME`, `SF_PASSWORD`, `SF_SECURITY_TOKEN`
+- `SF_DOMAIN` — `login` for production, `test` for sandbox
+
+**Option B — Client Credentials (recommended):**
+- `SF_AUTH_METHOD=client_credentials`
+- `SF_CLIENT_ID`, `SF_CLIENT_SECRET`
+- `SF_MY_DOMAIN` — your org's My Domain hostname (Setup → My Domain)
+
+Run cells sequentially. Section 8 inserts records into Salesforce; Section 9 exports data locally without inserting.
