@@ -94,7 +94,8 @@ function Write-StatusMessage {
 #region Inventory
 
 Write-SectionHeader "PowerShell Module Inventory & Update Tool"
-Write-StatusMessage "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -Level Info
+$startedTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+Write-StatusMessage "Started: $startedTime" -Level Info
 Write-StatusMessage "Scope  : $Scope" -Level Info
 
 # Ensure PSGallery is available
@@ -230,7 +231,7 @@ $skippedCount      = 0
 $updateAllRemaining = $UpdateAll  # set by -UpdateAll switch or A response
 
 foreach ($mod in $modulesToUpdate) {
-    $label = "$($mod.Name) [$($mod.InstalledVersion) → $($mod.LatestVersion)]"
+    $label = "$($mod.Name) [$($mod.InstalledVersion) -> $($mod.LatestVersion)]"
 
     if (-not $updateAllRemaining) {
         $response = (Read-Host "`nUpdate $label ? [Y] Yes  [A] Yes to All  [N] No  [Q] Quit").Trim().ToUpper()
@@ -256,7 +257,7 @@ foreach ($mod in $modulesToUpdate) {
             $successCount++
         }
         catch {
-            Write-StatusMessage "  Failed  : $($mod.Name) — $($_.Exception.Message)" -Level Error
+            Write-StatusMessage "  Failed  : $($mod.Name) - $($_.Exception.Message)" -Level Error
             $failCount++
         }
     }
@@ -270,6 +271,7 @@ Write-SectionHeader "Update Results"
 Write-Host "  Successfully Updated : " -NoNewline; Write-Host $successCount -ForegroundColor Green
 Write-Host "  Failed               : " -NoNewline; Write-Host $failCount    -ForegroundColor $(if ($failCount -gt 0) { 'Red' } else { 'Gray' })
 Write-Host "  Skipped              : " -NoNewline; Write-Host $skippedCount -ForegroundColor Gray
-Write-StatusMessage "`nCompleted: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -Level Info
+$completedTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+Write-StatusMessage "`nCompleted: $completedTime" -Level Info
 
 #endregion
