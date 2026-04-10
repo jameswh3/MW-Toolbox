@@ -1,4 +1,7 @@
-#Requires -Modules Microsoft.PowerApps.Administration.PowerShell
+$module = Get-Module -ListAvailable Microsoft.PowerApps.Administration.PowerShell |
+    Sort-Object Version -Descending |
+    Select-Object -First 1
+Import-Module $module.Path -UseWindowsPowerShell
 
 function Get-AllDataPolicyConnectorInfo {
     BEGIN {
@@ -14,7 +17,7 @@ function Get-AllDataPolicyConnectorInfo {
             $dataPolicyId = $dp.PolicyName
 
             #foreach environment in the policy, get the environment name and id
-            $environments=$dp.Environments | Join-String -Property name -Separator ","
+            $environments = ($dp.Environments.Name) -join ","
 
             #foreach connector in businessdatagroups, get the connector name and id and flag as business data group
             foreach ($dg in $dp.BusinessDataGroup) {
