@@ -1,6 +1,6 @@
 # Configuration Variables used by multiple scripts
 $workingDirectory = (Get-Location).Path
-$startDate = (Get-Date).AddDays(-3).ToString("yyyy-MM-dd")
+$startDate = (Get-Date).AddDays(-10).ToString("yyyy-MM-dd")
 $endDate = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
 $outputDirectory = "c:\temp"
 
@@ -47,6 +47,9 @@ $AzureVMResourceGroupName = $env:AZURE_VM_RESOURCE_GROUP_NAME
 $KeyVaultName = $env:KEY_VAULT_NAME
 $KeyValutResourceGroupName = $env:KEY_VAULT_RESOURCE_GROUP_NAME
 
+#SharePoint Online Scripts
+$SPOAdminUrl = $env:SHAREPOINT_ONLINE_ADMIN_URL
+
 # PowerShell Menu Script Template with Categories
 
 #Trim trailing backslash from working directory, if it exists
@@ -55,7 +58,9 @@ $workingDirectory = $workingDirectory.TrimEnd('\')
 # Define menu items with categories
 $menuCategories = [ordered]@{
     "Azure" = @(
-        "Enable Public Network Access to Azure Key Vault"
+        "Enable Public Network Access to Azure Key Vault",
+        "Get Azure Agent Inventory",
+        "Get SharePoint Embedded Inventory"
     )
     "Compliance" = @(
         "Download Copilot Audit Logs from M365 Tenant",
@@ -209,6 +214,19 @@ do {
                 -KeyVaultName $KeyVaultName `
                 -AllowAllNetworks
         }
+        "Get Azure Agent Inventory" {
+            . "$workingDirectory\Azure\Get-AzureAgentInventory.ps1"
+            Get-AzureAgentInventory -SubscriptionId $AzureSubscriptionId `
+                -OutputPath "$outputDirectory\azure-agent-inventory.csv"
+        }
+        "Get SharePoint Embedded Inventory" {
+            if (-not $SPOAdminUrl) {
+                $SPOAdminUrl = Read-Host "Enter your SharePoint Online Admin URL (e.g., https://contoso-admin.sharepoint.com)"
+            }
+            . "$workingDirectory\SharePoint-Online\Get-SPOEmbeddedInventory.ps1"
+            Get-SPOEmbeddedInventory -SPOAdminUrl $SPOAdminUrl `
+                -OutputPath "$outputDirectory\spe-inventory.csv"
+        }
         "Get Billing Plans Via API" {
             . "$workingDirectory\Power-Platform\Get-BillingPlansViaAPI.ps1"
             $billingPlans = Get-BillingPlansViaAPI -ClientId $PowerPlatClientId `
@@ -301,6 +319,7 @@ do {
             $AzureVMResourceGroupName = $env:AZURE_VM_RESOURCE_GROUP_NAME
             $KeyVaultName = $env:KEY_VAULT_NAME
             $KeyValutResourceGroupName = $env:KEY_VAULT_RESOURCE_GROUP_NAME
+            $SPOAdminUrl = $env:SHAREPOINT_ONLINE_ADMIN_URL
             Write-Host "Environment variables reloaded." -ForegroundColor Green
             Start-Sleep -Seconds 2
         }
