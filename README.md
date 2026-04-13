@@ -116,6 +116,21 @@ Retrieves all Azure App Registrations and displays their names and App IDs.
 .\Azure\Get-AzureAppRegistrations.ps1
 ```
 
+### [Get-AzureAgentInventory.ps1](Azure/Get-AzureAgentInventory.ps1)
+
+Queries Azure Resource Graph to inventory agent-related resources across one or more subscriptions, including Bot Services, Azure AI/Cognitive Services accounts, Health Bots, and Machine Learning workspaces. Supports filtering by resource type and optional CSV export.
+
+#### Get-AzureAgentInventory.ps1 Example
+
+```PowerShell
+# Query all supported agent resources in the current Azure context
+Get-AzureAgentInventory
+
+# Export only Azure AI/Cognitive Services resources to CSV
+Get-AzureAgentInventory -ResourceType CognitiveServices `
+    -OutputPath "C:\temp\azure-agent-inventory.csv"
+```
+
 ### [Get-AzureBlobFiles.ps1](Azure/Get-AzureBlobFiles.ps1)
 
 Retrieves information about files stored in Azure Blob Storage containers.
@@ -178,6 +193,25 @@ Set-AzureBlobStorageAccess -ResourceGroupName "myResourceGroup" `
 # Disable network restrictions
 Set-AzureBlobStorageAccess -ResourceGroupName "myResourceGroup" `
     -StorageAccountName "mystorageaccount"
+```
+
+### [Set-AzureKeyVaultNetworkAccess.ps1](Azure/Set-AzureKeyVaultNetworkAccess.ps1)
+
+Configures Azure Key Vault public network access and firewall rules. Supports disabling public access entirely, allowing all networks, or restricting access to selected IP ranges including the caller's current public IP.
+
+#### Set-AzureKeyVaultNetworkAccess.ps1 Example
+
+```PowerShell
+# Restrict Key Vault access to selected networks and add your current public IP
+Set-AzureKeyVaultNetworkAccess -ResourceGroupName "myResourceGroup" `
+    -KeyVaultName "myKeyVault" `
+    -Enable `
+    -AddCurrentIP
+
+# Disable all public network access
+Set-AzureKeyVaultNetworkAccess -ResourceGroupName "myResourceGroup" `
+    -KeyVaultName "myKeyVault" `
+    -Disable
 ```
 
 ### [Set-AzureSQLServerAccess.ps1](Azure/Set-AzureSQLServerAccess.ps1)
@@ -566,10 +600,29 @@ Imports `.rdp` files from a source folder into an existing Remote Desktop Connec
     -GroupName "Lab Servers"
 ```
 
-### [salesforce_synthetic_data_generator.ipynb](Misc/salesforce_synthetic_data_generator.ipynb)
+### [csv-to-word-documents.ipynb](Misc/csv-to-word-documents.ipynb)
 
-Legacy location of the Salesforce Synthetic Data Generator notebook. See the primary version in the [Salesforce/](Salesforce/) folder.
+A Jupyter Notebook that reads a CSV file and generates an individual Word document for each row. Column names become section headings, and the configured title column is used to name each output file.
 
+#### csv-to-word-documents.ipynb Example
+
+Open the notebook in VS Code, update `CSV_FILE_PATH`, `OUTPUT_DIR`, and `TITLE_COLUMN`, then run all cells to generate the Word documents.
+
+### [csv-to-word-documents-simplified.ipynb](Misc/csv-to-word-documents-simplified.ipynb)
+
+A streamlined version of the CSV-to-Word workflow for quickly converting structured CSV data into one Word document per record.
+
+#### csv-to-word-documents-simplified.ipynb Example
+
+Open the notebook in VS Code, update the input CSV and output folder paths, and run the cells in order.
+
+### [pst_calendar_extraction.ipynb](Misc/pst_calendar_extraction.ipynb)
+
+A Jupyter Notebook for extracting calendar event details from PST files for meeting analysis. Includes a Windows-friendly `pywin32` approach and guidance for using `readpst` when needed.
+
+#### pst_calendar_extraction.ipynb Example
+
+Open the notebook in VS Code, update the PST file path and export settings, then run the cells sequentially to extract and analyze calendar events.
 
 ## MsGraph
 
@@ -639,6 +692,33 @@ Converts conversation transcript data from Power Platform to human-readable form
 # Convert transcript data to readable format
 .\Power-Platform\ConvertFrom-AgentTranscript.ps1 -InputFile "C:\temp\conversationtranscripts.txt" `
     -OutputFile "C:\temp\readable_transcripts.txt"
+```
+
+### [Diagnose-CopilotStudioMDCA.ps1](Power-Platform/Diagnose-CopilotStudioMDCA.ps1)
+
+Runs a diagnostic workflow for Copilot Studio custom agent and Microsoft Defender for Cloud Apps integration issues. Checks the app registration, service principal state, admin consent, conditional access impact, and recent sign-in activity, then writes the results to a diagnostic log file.
+
+#### Diagnose-CopilotStudioMDCA.ps1 Example
+
+```PowerShell
+# Run the diagnostic for a specific tenant and app registration
+.\Power-Platform\Diagnose-CopilotStudioMDCA.ps1 -AppRegistrationId "12345678-1234-1234-1234-123456789012" `
+    -TenantId "your-tenant-id" `
+    -OutputPath "C:\temp\DiagnosticOutput.txt"
+```
+
+### [Get-AgentMessageConsumptionReport.ps1](Power-Platform/Get-AgentMessageConsumptionReport.ps1)
+
+Retrieves Copilot Studio message consumption for Power Platform environments over a reporting period using the Licensing API. Useful for reviewing billed and non-billed credits by environment and feature.
+
+#### Get-AgentMessageConsumptionReport.ps1 Example
+
+```PowerShell
+# Load the script and review the collected consumption data
+. .\Power-Platform\Get-AgentMessageConsumptionReport.ps1
+
+# Export the results if needed
+$consumption | Export-Csv -Path "C:\temp\agent-message-consumption.csv" -NoTypeInformation
 ```
 
 ### [Get-AllDataPolicyConnectorInfo.ps1](Power-Platform/Get-AllDataPolicyConnectorInfo.ps1)
@@ -861,6 +941,16 @@ Inventory-SPFarm `
 
 ```
 
+## Snowflake
+
+### [snowflake_oauth_lab_setup.ipynb](Snowflake/snowflake_oauth_lab_setup.ipynb)
+
+A Jupyter Notebook lab for configuring Snowflake OAuth with Azure/Entra ID. It automates most of the setup work, including app registration creation or reuse, app role assignment, token generation, Snowflake SQL generation, and optional direct execution when admin credentials are provided.
+
+#### snowflake_oauth_lab_setup.ipynb Example
+
+Open the notebook in VS Code and run the cells sequentially. Sign in first with `az login`, and optionally populate `.env` with `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_ADMIN_USER`, and `SNOWFLAKE_ADMIN_PASSWORD` if you want the generated SQL to be applied directly in Snowflake.
+
 ## SQL
 
 ### [TableSchemaToJSON.sql](SQL/TableSchemaToJSON.sql)
@@ -903,6 +993,36 @@ ConvertTo-SharePointDriveId `
     -siteId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" `
     -webId  "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" `
     -listId "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+```
+
+### [Get-SharePointDriveId.ps1](SharePoint-Online/Get-SharePointDriveId.ps1)
+
+Returns the Microsoft Graph Drive ID for one or all document libraries in a SharePoint site. Useful when you need the drive identifier for Graph API calls or automation.
+
+#### Get-SharePointDriveId.ps1 Example
+
+```PowerShell
+# Get all document library Drive IDs for a SharePoint site
+.\SharePoint-Online\Get-SharePointDriveId.ps1 -SharePointUrl "https://contoso.sharepoint.com/sites/MySite"
+
+# Get the Drive ID for a specific library
+.\SharePoint-Online\Get-SharePointDriveId.ps1 -SharePointUrl "https://contoso.sharepoint.com/sites/MySite" `
+    -LibraryName "Documents"
+```
+
+### [Get-SPOEmbeddedInventory.ps1](SharePoint-Online/Get-SPOEmbeddedInventory.ps1)
+
+Inventories SharePoint Embedded containers across the tenant, including storage, owners, status, and owning application metadata. Supports optional CSV export for reporting.
+
+#### Get-SPOEmbeddedInventory.ps1 Example
+
+```PowerShell
+# Review all SharePoint Embedded containers in the tenant
+Get-SPOEmbeddedInventory -SPOAdminUrl "https://contoso-admin.sharepoint.com"
+
+# Export the inventory to CSV
+Get-SPOEmbeddedInventory -SPOAdminUrl "https://contoso-admin.sharepoint.com" `
+    -OutputPath "C:\temp\spe-inventory.csv"
 ```
 
 ### [Get-CopilotAgentReport.ps1](SharePoint-Online/Get-CopilotAgentReport.ps1)
@@ -1202,6 +1322,21 @@ Blocks a Teams app, making it unavailable to all users by modifying the app perm
 # Block app with a custom policy name
 .\Teams\Set-TeamsAppAvailability.ps1 -AppId "12345678-1234-1234-1234-123456789012" `
     -PolicyName "CustomPolicy"
+```
+
+## Viva
+
+### [Enable-VivaFeatures.ps1](Viva/Enable-VivaFeatures.ps1)
+
+Enables Microsoft Viva services for a tenant, including Viva Topics, Connections, Learning, and Insights, and configures the SharePoint home site used for Viva Connections.
+
+#### Enable-VivaFeatures.ps1 Example
+
+```PowerShell
+# Enable Viva services for the tenant
+.\Viva\Enable-VivaFeatures.ps1 -AdminUrl "https://contoso-admin.sharepoint.com" `
+    -HomeSiteUrl "https://contoso.sharepoint.com/sites/Home" `
+    -UserScope "All"
 ```
 
 ## Salesforce
