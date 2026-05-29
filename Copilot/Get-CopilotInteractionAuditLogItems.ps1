@@ -39,7 +39,7 @@ function Get-CopilotInteractionAuditLogItems {
             }
 
             $recordType="CopilotInteraction"
-            $sessionId = "$recordType from $EndDate to $EndDate"
+            $sessionId = "$recordType from $StartDate to $EndDate & $(Get-Random -Minimum 1 -Maximum 100000)"
 
             
       }
@@ -85,11 +85,26 @@ function Get-CopilotInteractionAuditLogItems {
                         $messageCount++
                   }
                   $copilotDatum | Add-Member NoteProperty MessageCount ($messageCount)
+                  $accessedResourceActionCounts = @{}
                   #Get Accessed Resources; note that when resource is a website, the Type is not present
                   $accessedResources=@()
-                  foreach ($accessedResource in $auditData.CopilotEventData.AccessedResources) {
+                  $resources = @($auditData.CopilotEventData.AccessedResources)
+                  foreach ($accessedResource in $resources) {
                         $accessedResources+=($accessedResource.Type) ? $accessedResource.Type : $accessedResource.SiteUrl
+
+                        $actionKey = ($accessedResource.Action) ? $accessedResource.Action : "No Action Defined"
+                        if ($accessedResourceActionCounts.ContainsKey($actionKey)) {
+                              $accessedResourceActionCounts[$actionKey]++
+                        } else {
+                              $accessedResourceActionCounts[$actionKey] = 1
+                        }
                   }
+                  if ($accessedResourceActionCounts.Count -gt 0) {
+                        $accessedResourceActionsJson = ($accessedResourceActionCounts | ConvertTo-Json -Compress)
+                  } else {
+                        $accessedResourceActionsJson = "{}"
+                  }
+                  $copilotDatum | Add-Member NoteProperty AccessedResourceActionsJson($accessedResourceActionsJson)
                   # Create a hashtable to store the counts of each string
                   if ($accessedResources.Count -gt 0) {
                         $accessedResourcesCounts = @{}
@@ -114,11 +129,52 @@ function Get-CopilotInteractionAuditLogItems {
             
       }
       END {
-            if ($Append) {
-                  $copilotData | Export-CSV -path $OutputFile -NoTypeInformation -Append
+            if ($Append -and (Test-Path -Path $OutputFile) -and $copilotData.Count -gt 0) {
+                  $existingData = Import-Csv -Path $OutputFile
+
+                  if ($existingData.Count -gt 0) {
+                        $requiredColumns = @(
+                              "AccessedResourceActionsJson"
+                        )
+                        $existingColumns = @($existingData[0].PSObject.Properties.Name)
+                        $missingColumns = @($requiredColumns | Where-Object { $_ -notin $existingColumns })
+
+                        if ($missingColumns.Count -gt 0) {
+                              Write-Host "Existing CSV is missing new columns ($($missingColumns -join ', ')). Rewriting file with upgraded schema..." -ForegroundColor Yellow
+                              $columnNames = [System.Collections.Generic.List[string]]::new()
+                              $deprecatedColumns = @(
+                                    "AccessedResourceActions",
+                                    "ComputerUseInvocationCount",
+                                    "HasComputerUseInvocation"
+                              )
+
+                              foreach ($name in $existingColumns) {
+                                    if (($name -notin $deprecatedColumns) -and (-not $columnNames.Contains($name))) {
+                                          $null = $columnNames.Add($name)
+                                    }
+                              }
+                              foreach ($name in $copilotData[0].PSObject.Properties.Name) {
+                                    if (($name -notin $deprecatedColumns) -and (-not $columnNames.Contains($name))) {
+                                          $null = $columnNames.Add($name)
+                                    }
+                              }
+
+                              $combinedData = @($existingData) + @($copilotData)
+                              $combinedData | Select-Object -Property $columnNames | Export-Csv -Path $OutputFile -NoTypeInformation
+                        }
+                        else {
+                              $copilotData | Export-CSV -Path $OutputFile -NoTypeInformation -Append
+                        }
+                  }
+                  else {
+                        $copilotData | Export-CSV -Path $OutputFile -NoTypeInformation
+                  }
+            }
+            elseif ($Append) {
+                  $copilotData | Export-CSV -Path $OutputFile -NoTypeInformation -Append
             }
             else {
-                  $copilotData | Export-CSV -path $OutputFile -NoTypeInformation
+                  $copilotData | Export-CSV -Path $OutputFile -NoTypeInformation
             }
       }
 
