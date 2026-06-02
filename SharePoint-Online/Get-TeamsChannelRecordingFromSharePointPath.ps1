@@ -17,6 +17,7 @@
 
 .PARAMETER OutputFolder
     Local folder for downloaded transcript files.
+    Aliases: OutputPath, DestinationFolder
 
 .PARAMETER PnPWebConnection
     Optional existing PnP connection. If omitted, the script connects interactively.
@@ -48,6 +49,7 @@ param(
     [string]$RecordingUrl,
 
     [Parameter(Mandatory = $false)]
+    [Alias("OutputPath", "DestinationFolder")]
     [ValidateNotNullOrEmpty()]
     [string]$OutputFolder = (Join-Path (Get-Location).Path "Transcripts"),
 
