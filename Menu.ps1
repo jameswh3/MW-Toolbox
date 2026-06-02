@@ -90,6 +90,7 @@ $menuCategories = [ordered]@{
         "Download Azure Blob Files"
     )
     "System" = @(
+        "Sign Out of Azure",
         "Reload Environment Variables",
         "Exit"
     )
@@ -299,6 +300,32 @@ do {
                 -TenantDomain $PowerPlatTenantDomain `
                 -FieldList "botid,componentidunique,applicationmanifestinformation,name,configuration,createdon,publishedon,_ownerid_value,_createdby_value,solutionid,modifiedon,_owninguser_value,schemaname,_modifiedby_value,_publishedby_value,authenticationmode,synchronizationstatus,ismanaged" `
                 | out-file "$outputDirectory\bots.txt" -Append
+        }
+        "Sign Out of Azure" {
+            Write-Host "Signing out of Azure sessions..." -ForegroundColor Yellow
+
+            try {
+                if (Get-Command Disconnect-AzAccount -ErrorAction SilentlyContinue) {
+                    Disconnect-AzAccount -Scope Process -ErrorAction SilentlyContinue | Out-Null
+                    Disconnect-AzAccount -Scope CurrentUser -ErrorAction SilentlyContinue | Out-Null
+                }
+
+                if (Get-Command Clear-AzContext -ErrorAction SilentlyContinue) {
+                    Clear-AzContext -Scope Process -Force -ErrorAction SilentlyContinue
+                    Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
+                }
+
+                if (Get-Command az -ErrorAction SilentlyContinue) {
+                    az logout | Out-Null
+                }
+
+                Write-Host "Azure sign-out complete." -ForegroundColor Green
+            }
+            catch {
+                Write-Host "Failed to fully sign out of Azure: $($_.Exception.Message)" -ForegroundColor Red
+            }
+
+            Start-Sleep -Seconds 2
         }
         "Reload Environment Variables" {
             Import-DotEnv

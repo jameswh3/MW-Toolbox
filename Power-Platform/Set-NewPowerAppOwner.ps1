@@ -17,9 +17,9 @@
     The GUID of the new owner (user) to assign to the Power App.
 
 .EXAMPLE
-    .\Set-NewPowerAppOwner.ps1 -AppName "cd304785-1a9b-44c3-91a8-c4174b59d835" `
-        -EnvironmentName "de6b35af-dd3f-e14d-80ff-7a702c009100" `
-        -AppOwner "7eda74de-bd8b-ef11-ac21-000d3a5a9ee8"
+    .\Set-NewPowerAppOwner.ps1 -AppName "00000000-0000-0000-0000-000000000001" `
+        -EnvironmentName "00000000-0000-0000-0000-000000000002" `
+        -AppOwner "00000000-0000-0000-0000-000000000003"
 
 .NOTES
     Requires Power Apps administrative permissions.

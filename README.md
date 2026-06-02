@@ -539,6 +539,20 @@ Update-AADUserUPN -originalUpn "user@olddomain.com" `
 
 ## Misc
 
+### [countdown_timer_video.py](Misc/countdown_timer_video.py)
+
+Generates a square MP4 countdown timer video with a dark background and centered mm:ss text. Supports duration input in seconds, mm:ss, or hh:mm:ss. These can be added to PowerPoint slides to provide a countdown timer on a slide.
+
+#### countdown_timer_video.py Example
+
+```PowerShell
+# 90-second countdown at 1080x1080 (default 30 FPS)
+python .\Misc\countdown_timer_video.py --duration 90 --output .\Misc\countdown-90s.mp4
+
+# 10-minute countdown at 720x720 and 24 FPS
+python .\Misc\countdown_timer_video.py --duration 00:10:00 --size 720 --fps 24 --output .\Misc\countdown-10m.mp4
+```
+
 ### [Get-SystemPerformanceAnalysis.ps1](Misc/Get-SystemPerformanceAnalysis.ps1)
 
 Analyzes system performance metrics and provides detailed performance insights.
