@@ -2,8 +2,8 @@
 # Copies the pre-commit hook into .git/hooks/ and sets it executable.
 # Re-run this after cloning or if the hook ever needs to be reinstalled.
 
-$repoRoot = $PSScriptRoot
-$source   = Join-Path $PSScriptRoot "pre-commit"
+$repoRoot = Split-Path $PSScriptRoot -Parent
+$source   = Join-Path $repoRoot ".githooks\pre-commit"
 $dest     = Join-Path $repoRoot ".git\hooks\pre-commit"
 
 Copy-Item -Path $source -Destination $dest -Force
@@ -11,7 +11,7 @@ Copy-Item -Path $source -Destination $dest -Force
 # Mark as executable so Git (via Git Bash) will invoke it
 $gitExe = (Get-Command git -ErrorAction SilentlyContinue)?.Source
 if ($gitExe) {
-    & git update-index --chmod=+x pre-commit 2>$null
+    & git update-index --chmod=+x .githooks/pre-commit 2>$null
     # Use git's bundled chmod via sh
     $shExe = Join-Path (Split-Path $gitExe) "sh.exe"
     if (Test-Path $shExe) {
