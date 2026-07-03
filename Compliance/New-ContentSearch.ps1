@@ -55,10 +55,6 @@ function New-ContentSearch {
         [string]$UserPrincipalName,
         
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Mime", "FxStream", "Pst")]
-        [string]$ExportFormat = "Mime",
-        
-        [Parameter(Mandatory = $false)]
         [int]$StatusCheckInterval = 10
     )
 
@@ -73,31 +69,26 @@ function New-ContentSearch {
         return $searchStatus.Status
     }
 
-    # Function to check the status of the compliance search action
-    function Get-ComplianceSearchActionStatus {
-        param (
-            [string]$searchActionName
-        )
-        # Get the status of the compliance search action
-        $searchActionStatus = Get-ComplianceSearchAction -Identity $searchActionName
-        # Return the status
-        return $searchActionStatus.Status
-    }
-
     # Connect to Compliance Session
     try {
         Write-Host "Connecting to Compliance Session..." -ForegroundColor Cyan
         if ($UserPrincipalName) {
-            Connect-IPPSSession -UserPrincipalName $UserPrincipalName
+            Connect-IPPSSession -UserPrincipalName $UserPrincipalName -EnableSearchOnlySession
         }
         else {
-            Connect-IPPSSession
+            Connect-IPPSSession -EnableSearchOnlySession
         }
         Write-Host "Successfully connected to Compliance Session." -ForegroundColor Green
     }
     catch {
-        Write-Error "Failed to connect to Compliance Session: $_"
-        return
+        $message = "Failed to connect to Compliance Session: $($_.Exception.Message)"
+        Write-Error $message
+        return [pscustomobject]@{
+            Success = $false
+            SearchName = $SearchName
+            ActionIdentity = $null
+            ErrorMessage = $message
+        }
     }
 
     # Create new compliance search
@@ -111,8 +102,14 @@ function New-ContentSearch {
         Start-ComplianceSearch -Identity $SearchName
     }
     catch {
-        Write-Error "Failed to create or start compliance search: $_"
-        return
+        $message = "Failed to create or start compliance search: $($_.Exception.Message)"
+        Write-Error $message
+        return [pscustomobject]@{
+            Success = $false
+            SearchName = $SearchName
+            ActionIdentity = $null
+            ErrorMessage = $message
+        }
     }
 
     # Loop to check the status until the search is completed
@@ -126,32 +123,12 @@ function New-ContentSearch {
     } while ($status -ne "Completed")
 
     Write-Host "`nThe compliance search '$SearchName' is completed." -ForegroundColor Green
+    Write-Host "`nFunction completed successfully. Search results are ready." -ForegroundColor Green
 
-    # Create export action
-    try {
-        $complianceSearchActionName = "$SearchName - Export"
-        Write-Host "`nCreating export action: $complianceSearchActionName" -ForegroundColor Cyan
-        
-        New-ComplianceSearchAction -SearchName $SearchName `
-            -Export `
-            -Format $ExportFormat `
-            -Confirm:$false
+    return [pscustomobject]@{
+        Success = $true
+        SearchName = $SearchName
+        ActionIdentity = $null
+        ErrorMessage = $null
     }
-    catch {
-        Write-Error "Failed to create compliance search export action: $_"
-        return
-    }
-
-    # Loop to check the status until the search action is completed
-    Write-Host "`nMonitoring export progress..." -ForegroundColor Yellow
-    do {
-        $status = Get-ComplianceSearchActionStatus -searchActionName "$SearchName`_Export"
-        Write-Host "Current status of the compliance search action '$SearchName`_Export': $status"
-        if ($status -ne "Completed") {
-            Start-Sleep -Seconds $StatusCheckInterval
-        }
-    } while ($status -ne "Completed")
-
-    Write-Host "`nThe compliance search action '$SearchName`_Export' is completed." -ForegroundColor Green
-    Write-Host "`nFunction completed successfully. Export is ready for download." -ForegroundColor Green
 }
