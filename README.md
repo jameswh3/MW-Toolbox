@@ -10,10 +10,10 @@ Many scripts in this toolbox use environment variables for configuration. These 
 
 #### Creating Your .env File
 
-1. Copy the `.env-example` file to create your own `.env` file:
+1. Copy the `.env.example` file to create your own `.env` file:
 
    ```powershell
-   Copy-Item .env-example .env
+    Copy-Item .env.example .env
    ```
 
 2. Edit the `.env` file and replace the placeholder values with your actual configuration:
@@ -24,6 +24,7 @@ Many scripts in this toolbox use environment variables for configuration. These 
 
    # Compliance scripts
    UPN=admin@yourtenant.onmicrosoft.com
+    PURVIEW_LABEL_GUID=11111111-2222-3333-4444-555555555555
 
    # Blob storage scripts
    STORAGE_ACCOUNT_NAME=yourstorageaccount
@@ -37,16 +38,17 @@ Many scripts in this toolbox use environment variables for configuration. These 
 
 #### Available Environment Variables
 
-The `.env-example` file includes configuration for:
+The `.env.example` file includes configuration for:
 
 - **Multiple Scripts**: `TENANT_ID`
-- **Compliance Scripts**: `UPN`
+- **Compliance Scripts**: `UPN`, `PURVIEW_LABEL_GUID`
 - **Blob Storage Scripts**: `STORAGE_ACCOUNT_NAME`, `RESOURCE_GROUP_NAME`, `CONTAINER_NAME`
 - **Database Scripts**: `SQL_SERVER_NAME`, `SQL_RESOURCE_GROUP_NAME`
 - **Fabric Scripts**: `FABRIC_RESOURCE_GROUP_NAME`, `FABRIC_NAME`
 - **Power Platform Scripts**: `POWER_PLAT_CLIENT_ID`, `POWER_PLAT_CLIENT_SECRET`, `POWER_PLAT_TENANT_DOMAIN`, `POWER_PLAT_ORG_URL`
 - **Azure VM Scripts**: `AZURE_SUBSCRIPTION_ID`, `AZURE_VM_RESOURCE_GROUP_NAME`
-- **SharePoint Online Scripts**: `SHAREPOINT_ONLINE_CLIENT_ID`, `SHAREPOINT_ONLINE_CERTIFICATE_PATH`, `SHAREPOINT_ONLINE_CERTIFICATE_PASSWORD`, `SHAREPOINT_ONLINE_SITE_ID`, `SHAREPOINT_ONLINE_DRIVE_ID`, `SHAREPOINT_ONLINE_FOLDER_PATH`, `SHAREPOINT_ONLINE_ADMIN_URL`, `SHAREPOINT_ONLINE_SITE`, `SHAREPOINT_ONLINE_TENANT_DOMAIN`, `SHAREPOINT_ONLINE_LIBRARY`
+- **SharePoint Online Scripts (General)**: `SHAREPOINT_ONLINE_CLIENT_ID`, `SHAREPOINT_ONLINE_CERTIFICATE_THUMBPRINT`, `SHAREPOINT_ONLINE_CERTIFICATE_PATH`, `SHAREPOINT_ONLINE_CERTIFICATE_PASSWORD`, `SHAREPOINT_ONLINE_SITE_ID`, `SHAREPOINT_ONLINE_DRIVE_ID`, `SHAREPOINT_ONLINE_FOLDER_PATH`, `SHAREPOINT_ONLINE_ADMIN_URL`, `SHAREPOINT_ONLINE_SITE`, `SHAREPOINT_ONLINE_TENANT_DOMAIN`, `SHAREPOINT_ONLINE_LIBRARY`
+- **SharePoint Online Scripts (Sites.Selected transcript flow)**: `SHAREPOINT_ONLINE_SELECTED_SITES_AUTH_MODE`, `SHAREPOINT_ONLINE_SELECTED_SITES_TENANT_ID`, `SHAREPOINT_ONLINE_SELECTED_SITES_CLIENT_ID`, `SHAREPOINT_ONLINE_SELECTED_SITES_CLIENT_SECRET`, `SHAREPOINT_ONLINE_SELECTED_SITES_CERTIFICATE_THUMBPRINT`, `SHAREPOINT_ONLINE_SELECTED_SITES_CERTIFICATE_PATH`, `SHAREPOINT_ONLINE_SELECTED_SITES_CERTIFICATE_PASSWORD`, `SHAREPOINT_ONLINE_SELECTED_SITES_TARGET_SITE_URL`, `SHAREPOINT_ONLINE_SELECTED_SITES_APP_DISPLAY_NAME`, `SHAREPOINT_ONLINE_SELECTED_SITES_PERMISSION_ROLE`
 - **Salesforce Scripts**: `SF_AUTH_METHOD`, `SF_MY_DOMAIN`, `SF_API_BATCH_SIZE`, `SF_OUTPUT_DIR`, `SF_CLIENT_ID`, `SF_CLIENT_SECRET`, `SF_USERNAME`, `SF_PASSWORD`, `SF_SECURITY_TOKEN`
 
 > **Note**: The `.env` file is included in `.gitignore` to prevent accidentally committing sensitive credentials to version control.
@@ -356,6 +358,23 @@ New-ContentSearch -SearchName "Q4Search" `
     -UserPrincipalName "admin@contoso.com"
 ```
 
+### [Set-PurviewSensitivityLabel.ps1](Compliance/Set-PurviewSensitivityLabel.ps1)
+
+Applies a Microsoft Purview sensitivity label to files in a folder using a label GUID.
+
+#### Set-PurviewSensitivityLabel.ps1 Example
+
+```PowerShell
+# Dot-source helper to load .env variables if needed
+. .\Import-DotEnv.ps1
+Import-DotEnv
+
+# Apply the label GUID from .env to all files under a folder
+Set-PurviewSensitivityLabel -FolderPath "C:\Data" `
+    -LabelId $env:PURVIEW_LABEL_GUID `
+    -Confirm:$false
+```
+
 ## Copilot
 
 ### [Get-CopilotCreationAuditLogItems.ps1](Copilot/Get-CopilotCreationAuditLogItems.ps1)
@@ -637,6 +656,131 @@ A Jupyter Notebook for extracting calendar event details from PST files for meet
 #### pst_calendar_extraction.ipynb Example
 
 Open the notebook in VS Code, update the PST file path and export settings, then run the cells sequentially to extract and analyze calendar events.
+
+### [icon_generator.py](Misc/icon_generator.py)
+
+A Python tool to generate icons with circular backgrounds using Microsoft's Fluent UI System Icons library. Fetches icons on-demand from GitHub in real-time, creates square PNG images (with transparent backgrounds) with a colored circular background and the icon centered inside. Access to 1000+ professional Microsoft-designed icons.
+
+#### icon_generator.py Requirements
+
+```bash
+pip install svglib reportlab Pillow
+```
+
+#### icon_generator.py Usage
+
+List all available icons:
+
+```bash
+python .\Misc\icon_generator.py --list
+```
+
+Generate specific icons (default: 256px, Microsoft Blue circle, regular style):
+
+```bash
+python .\Misc\icon_generator.py --icon "Agents" "Archive" "Apps"
+```
+
+Generate icons with custom size and color:
+
+```bash
+python .\Misc\icon_generator.py --icon "Agents" "Archive" --size 512 --circle-color "#1f883d"
+```
+
+Generate with filled style instead of regular:
+
+```bash
+python .\Misc\icon_generator.py --icon "Backspace" "Badge" --icon-style "filled"
+```
+
+Generate with larger icons (32px instead of default 24px):
+
+```bash
+python .\Misc\icon_generator.py --icon "Agents" --size 512 --icon-size 32
+```
+
+#### icon_generator.py Command-Line Options
+
+- `--icon ICON [ICON ...]` — Specific icon name(s) to generate (space-separated). Supports icon names with spaces, e.g., "Access Time", "Agents Sync"
+- `--output PATH` — Output directory (default: `./icons`)
+- `--size SIZE` — Output image size in pixels (default: 256)
+- `--circle-color COLOR` — Hex color for circle background (default: `#0078d4` - Microsoft Blue)
+- `--icon-size SIZE` — Fluent UI icon size: 16, 20, 24, 32, or 48 px (default: 24)
+- `--icon-style STYLE` — Icon style: `regular` or `filled` (default: regular)
+- `--no-cache` — Disable local caching (always fetch from GitHub)
+- `--list` — List all 1000+ available icons and exit
+- `--help` — Show help message
+
+#### icon_generator.py Features
+
+- **1000+ Icons** — Access all Microsoft Fluent UI System Icons
+- **Real-time Fetching** — Icons fetched on-demand from GitHub (no bundling required)
+- **Smart Caching** — First fetch caches locally (~/.icon_generator_cache/), subsequent runs are instant
+- **Transparent Background** — PNG files with RGBA support for transparency
+- **Circular Backgrounds** — Professional circular design with customizable colors
+- **Multiple Sizes** — Output size configurable from 64px to 2048px
+- **Flexible Styles** — Choose between regular and filled icon variants
+- **Icon Sizing** — Fluent UI icons available at 16, 20, 24, 32, and 48 px
+
+#### icon_generator.py Examples
+
+### Example 1: Generate a basic UI kit
+
+```bash
+python .\Misc\icon_generator.py --list  # See available icons
+python .\Misc\icon_generator.py --icon "Agents" "Archive" "Apps" "Backspace" --size 256
+```
+
+### Example 2: Create dark mode icons with green circle
+
+```bash
+python .\Misc\icon_generator.py `
+  --icon "Agents" "Archive" "Apps" `
+  --size 512 `
+  --circle-color "#1f883d" `
+  --output ./dark-mode-icons
+```
+
+### Example 3: Generate filled-style icons at 32px base size
+
+```bash
+python .\Misc\icon_generator.py `
+  --icon "Badge" "Backspace" "Basketball" `
+  --icon-size 32 `
+  --icon-style filled `
+  --output ./filled-icons
+```
+
+### Example 4: Batch generate icons with caching
+
+```bash
+# First run fetches from GitHub and caches locally (~5 seconds)
+python .\Misc\icon_generator.py --icon "Agents" "Archive" --size 256
+
+# Second run uses cache (instant)
+python .\Misc\icon_generator.py --icon "Archive" --size 512
+
+# Force fresh fetch (bypass cache)
+python .\Misc\icon_generator.py --icon "Agents" --no-cache
+```
+
+#### icon_generator.py Icon Naming
+
+Icons are referred to by their Fluent UI names, which support spaces and title casing:
+
+- Single word: `Archive`, `Backspace`, `Badge`
+- Multiple words: `Access Time`, `Agents Sync`, `Animal Cat`
+- Use exact names from `--list` output
+
+#### icon_generator.py Architecture
+
+The tool follows this workflow:
+
+1. **Fetch** — Download icon SVG from GitHub Fluent UI repository
+2. **Cache** — Store locally to ~/.icon_generator_cache/fluent-ui/ for fast reuse
+3. **Convert** — Transform SVG to PNG using svglib + reportlab
+4. **Composite** — Place icon on circular background using PIL
+5. **Export** — Save as PNG with transparent background (RGBA)
 
 ## MsGraph
 
@@ -972,6 +1116,53 @@ Open the notebook in VS Code and run the cells sequentially. Sign in first with 
 SQL query that converts a table schema to JSON format, useful for documentation and schema analysis. Can be used in agent instructions to tell the agent how the tables are structured.
 
 ## SharePoint-Online
+
+### [Grant-SharePointSelectedSitePermission.ps1](SharePoint-Online/Grant-SharePointSelectedSitePermission.ps1)
+
+Grants `Sites.Selected` permission for a specific SharePoint site to an Entra app using Microsoft Graph. The script resolves site ID from URL and creates the site permission grant.
+
+#### Grant-SharePointSelectedSitePermission.ps1 Example
+
+```PowerShell
+# Uses .env defaults when available
+pwsh -NoProfile -File .\SharePoint-Online\Grant-SharePointSelectedSitePermission.ps1 -ResetAuthContext
+
+# Explicit values
+.\SharePoint-Online\Grant-SharePointSelectedSitePermission.ps1 `
+    -SiteUrl "https://contoso.sharepoint.com/sites/Leadership" `
+    -TargetAppId "00000000-0000-0000-0000-000000000000" `
+    -TargetAppDisplayName "SPO Transcript Reader" `
+    -Role read
+```
+
+### [Get-TeamsChannelRecordingFromSharePointPath.ps1](SharePoint-Online/Get-TeamsChannelRecordingFromSharePointPath.ps1)
+
+Downloads transcript `.vtt` files for a Teams channel recording stored in SharePoint from the recording URL.
+
+Auth modes:
+
+- `Interactive`: delegated sign-in
+- `Certificate`: app-only via certificate (supports thumbprint and pfx)
+- `ClientSecret`: app-only via client secret
+- `Auto`: prefers certificate, then client secret, then interactive
+
+#### Get-TeamsChannelRecordingFromSharePointPath.ps1 Example
+
+```PowerShell
+# Certificate-based Sites.Selected app-only auth
+.\SharePoint-Online\Get-TeamsChannelRecordingFromSharePointPath.ps1 `
+    -RecordingUrl "https://contoso.sharepoint.com/sites/Leadership/Shared%20Documents/General/Recordings/MyMeeting-Meeting Recording.mp4" `
+    -AuthMode Certificate `
+    -OutputFolder ".\SharePoint-Online\_test-output" `
+    -PassThru
+
+# Interactive delegated auth
+.\SharePoint-Online\Get-TeamsChannelRecordingFromSharePointPath.ps1 `
+    -RecordingUrl "https://contoso.sharepoint.com/sites/Leadership/Shared%20Documents/General/Recordings/MyMeeting-Meeting Recording.mp4" `
+    -AuthMode Interactive `
+    -OutputFolder ".\SharePoint-Online\_test-output" `
+    -PassThru
+```
 
 ### [Add-OwnersToSharePointSite.ps1](SharePoint-Online/Add-OwnersToSharePointSite.ps1)
 

@@ -64,7 +64,8 @@ $menuCategories = [ordered]@{
     )
     "Compliance" = @(
         "Download Copilot Audit Logs from M365 Tenant",
-        "Download Full Audit Logs from M365 Tenant"
+        "Download Full Audit Logs from M365 Tenant",
+        "Apply Sensitivity Label to Folder"
     )
     "Compute" = @(
         "Start Azure VMs",
@@ -155,6 +156,18 @@ do {
                 -EndDate $endDate `
                 -UserPrincipalName $upn `
                 -OutputPath "$outputDirectory\fullauditlog.csv"
+        }
+        "Apply General Label to Folder" {
+            $folderPath = Read-Host "Enter the folder path to label"
+            if (-not (Test-Path -Path $folderPath -PathType Container)) {
+                Write-Host "Folder does not exist: $folderPath" -ForegroundColor Red
+            } else {
+                . "$workingDirectory\Compliance\Set-PurviewSensitivityLabel.ps1"
+                $labelId = $env:PURVIEW_LABEL_GUID
+                Set-PurviewSensitivityLabel -FolderPath $folderPath `
+                    -LabelId $labelId `
+                    -JustificationMessage "Applied via menu automation"
+            }
         }
         "Download Azure Blob Files" { 
             
