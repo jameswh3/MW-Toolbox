@@ -41,21 +41,23 @@ Many scripts in this toolbox use environment variables for configuration. These 
 The `.env.example` file includes configuration for:
 
 - **Multiple Scripts**: `TENANT_ID`
-- **Compliance Scripts**: `UPN`, `PURVIEW_LABEL_GUID`
+- **Compliance Scripts**: `UPN`, `PURVIEW_LABEL_GUID`, `COPILOT_CONTENT_SEARCH_MAILBOX`, `COPILOT_CONTENT_SEARCH_UPN`, `COPILOT_CONTENT_SEARCH_QUERY`, `COPILOT_CONTENT_SEARCH_NAME_PREFIX`, `COPILOT_CONTENT_SEARCH_OUTPUT_DIRECTORY`
 - **Blob Storage Scripts**: `STORAGE_ACCOUNT_NAME`, `RESOURCE_GROUP_NAME`, `CONTAINER_NAME`
 - **Database Scripts**: `SQL_SERVER_NAME`, `SQL_RESOURCE_GROUP_NAME`
 - **Fabric Scripts**: `FABRIC_RESOURCE_GROUP_NAME`, `FABRIC_NAME`
-- **Power Platform Scripts**: `POWER_PLAT_CLIENT_ID`, `POWER_PLAT_CLIENT_SECRET`, `POWER_PLAT_TENANT_DOMAIN`, `POWER_PLAT_ORG_URL`
+- **Power Platform Scripts**: `POWER_PLAT_CLIENT_ID`, `POWER_PLAT_CLIENT_SECRET`, `POWER_PLAT_TENANT_DOMAIN`
+- **Power Platform Transcript Scripts**: `POWER_PLAT_ORG_URL`
 - **Azure VM Scripts**: `AZURE_SUBSCRIPTION_ID`, `AZURE_VM_RESOURCE_GROUP_NAME`
 - **SharePoint Online Scripts (General)**: `SHAREPOINT_ONLINE_CLIENT_ID`, `SHAREPOINT_ONLINE_CERTIFICATE_THUMBPRINT`, `SHAREPOINT_ONLINE_CERTIFICATE_PATH`, `SHAREPOINT_ONLINE_CERTIFICATE_PASSWORD`, `SHAREPOINT_ONLINE_SITE_ID`, `SHAREPOINT_ONLINE_DRIVE_ID`, `SHAREPOINT_ONLINE_FOLDER_PATH`, `SHAREPOINT_ONLINE_ADMIN_URL`, `SHAREPOINT_ONLINE_SITE`, `SHAREPOINT_ONLINE_TENANT_DOMAIN`, `SHAREPOINT_ONLINE_LIBRARY`
 - **SharePoint Online Scripts (Sites.Selected transcript flow)**: `SHAREPOINT_ONLINE_SELECTED_SITES_AUTH_MODE`, `SHAREPOINT_ONLINE_SELECTED_SITES_TENANT_ID`, `SHAREPOINT_ONLINE_SELECTED_SITES_CLIENT_ID`, `SHAREPOINT_ONLINE_SELECTED_SITES_CLIENT_SECRET`, `SHAREPOINT_ONLINE_SELECTED_SITES_CERTIFICATE_THUMBPRINT`, `SHAREPOINT_ONLINE_SELECTED_SITES_CERTIFICATE_PATH`, `SHAREPOINT_ONLINE_SELECTED_SITES_CERTIFICATE_PASSWORD`, `SHAREPOINT_ONLINE_SELECTED_SITES_TARGET_SITE_URL`, `SHAREPOINT_ONLINE_SELECTED_SITES_APP_DISPLAY_NAME`, `SHAREPOINT_ONLINE_SELECTED_SITES_PERMISSION_ROLE`
+- **Azure Key Vault Scripts**: `KEY_VAULT_NAME`, `KEY_VAULT_RESOURCE_GROUP_NAME`
 - **Salesforce Scripts**: `SF_AUTH_METHOD`, `SF_MY_DOMAIN`, `SF_API_BATCH_SIZE`, `SF_OUTPUT_DIR`, `SF_CLIENT_ID`, `SF_CLIENT_SECRET`, `SF_USERNAME`, `SF_PASSWORD`, `SF_SECURITY_TOKEN`
 
 > **Note**: The `.env` file is included in `.gitignore` to prevent accidentally committing sensitive credentials to version control.
 
-## Root Scripts
+## Bootstrap Scripts
 
-### [Import-DotEnv.ps1](Import-DotEnv.ps1)
+### [Import-DotEnv.ps1](scripts/bootstrap/Import-DotEnv.ps1)
 
 Provides a reusable `Import-DotEnv` function that loads environment variables from a `.env` file into the current PowerShell process. Used by other scripts in the toolbox to load configuration without hard-coding credentials.
 
@@ -63,7 +65,7 @@ Provides a reusable `Import-DotEnv` function that loads environment variables fr
 
 ```PowerShell
 # Dot-source the function and load variables from .env in the current directory
-. .\Import-DotEnv.ps1
+. .\scripts\bootstrap\Import-DotEnv.ps1
 Import-DotEnv
 
 # Load from a specific path
@@ -86,11 +88,11 @@ Central configuration file that sets up environment variables and common configu
 
 ## Repository Tooling
 
-### [clear_notebook_outputs.py](clear_notebook_outputs.py)
+### [clear_notebook_outputs.py](scripts/notebooks/clear_notebook_outputs.py)
 
 Python script invoked by the pre-commit hook to strip all cell outputs and execution counts from staged Jupyter notebooks before they are committed. Prevents binary output data and tokens from being stored in version control.
 
-### [install-hooks.ps1](install-hooks.ps1)
+### [install-hooks.ps1](scripts/git/install-hooks.ps1)
 
 One-time setup script that copies the `pre-commit` hook from the repo root into `.git/hooks/`. Run this after cloning the repository to activate automatic notebook output stripping on commit.
 
@@ -98,12 +100,12 @@ One-time setup script that copies the `pre-commit` hook from the repo root into 
 
 ```PowerShell
 # Run once after cloning
-.\install-hooks.ps1
+.\scripts\git\install-hooks.ps1
 ```
 
 ### [pre-commit](pre-commit)
 
-Git pre-commit hook (shell script) kept in version control so it can be shared across clones. Calls `clear_notebook_outputs.py` against all staged `.ipynb` files and re-stages the cleaned files automatically. Install it with `install-hooks.ps1`.
+Git pre-commit hook (shell script) kept in version control so it can be shared across clones. Calls `scripts/notebooks/clear_notebook_outputs.py` against all staged `.ipynb` files and re-stages the cleaned files automatically. Install it with `scripts/git/install-hooks.ps1`.
 
 ## Azure
 

@@ -5,7 +5,7 @@ $endDate = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
 $outputDirectory = "c:\temp"
 
 # Import the Import-DotEnv function
-. (Join-Path $workingDirectory "Import-DotEnv.ps1")
+. (Join-Path $workingDirectory "scripts\bootstrap\Import-DotEnv.ps1")
 
 # Load .env file if environment variables are not already set
 if (-not $env:UPN) {
@@ -17,6 +17,11 @@ $tenantId = $env:TENANT_ID
 
 #compliance scripts
 $upn = $env:UPN
+$copilotContentSearchMailbox = $env:COPILOT_CONTENT_SEARCH_MAILBOX
+$copilotContentSearchUpn = $env:COPILOT_CONTENT_SEARCH_UPN
+$copilotContentSearchQuery = $env:COPILOT_CONTENT_SEARCH_QUERY
+$copilotContentSearchNamePrefix = $env:COPILOT_CONTENT_SEARCH_NAME_PREFIX
+$copilotContentSearchOutputDirectory = $env:COPILOT_CONTENT_SEARCH_OUTPUT_DIRECTORY
 
 #blob storage scripts
 $storageAccountName = $env:STORAGE_ACCOUNT_NAME
@@ -65,7 +70,8 @@ $menuCategories = [ordered]@{
     "Compliance" = @(
         "Download Copilot Audit Logs from M365 Tenant",
         "Download Full Audit Logs from M365 Tenant",
-        "Apply Sensitivity Label to Folder"
+        "Apply Sensitivity Label to Folder",
+        "Run Content Search for Admin Prompts and Responses"
     )
     "Compute" = @(
         "Start Azure VMs",
@@ -157,17 +163,70 @@ do {
                 -UserPrincipalName $upn `
                 -OutputPath "$outputDirectory\fullauditlog.csv"
         }
-        "Apply General Label to Folder" {
+        "Apply Sensitivity Label to Folder" {
             $folderPath = Read-Host "Enter the folder path to label"
             if (-not (Test-Path -Path $folderPath -PathType Container)) {
                 Write-Host "Folder does not exist: $folderPath" -ForegroundColor Red
             } else {
                 . "$workingDirectory\Compliance\Set-PurviewSensitivityLabel.ps1"
                 $labelId = $env:PURVIEW_LABEL_GUID
+                if (-not $labelId) {
+                    Write-Host "PURVIEW_LABEL_GUID is not set. Add it to .env and reload environment variables." -ForegroundColor Red
+                    continue
+                }
                 Set-PurviewSensitivityLabel -FolderPath $folderPath `
                     -LabelId $labelId `
                     -JustificationMessage "Applied via menu automation"
             }
+        }
+        "Run Content Search for Admin Prompts and Responses" {
+            # Ensure we're connected to Compliance Center
+            try {
+                $null = Get-ComplianceSearch -ErrorAction Stop | Select-Object -First 1
+            }
+            catch {
+                Write-Host "Connecting to Compliance Center..." -ForegroundColor Yellow
+                Connect-IPPSSession -UserPrincipalName $upn -EnableSearchOnlySession
+            }
+
+            . "$workingDirectory\Compliance\New-ContentSearch.ps1"
+
+            if (-not $copilotContentSearchMailbox) {
+                $copilotContentSearchMailbox = Read-Host "Enter mailbox to search (for example, admin@contoso.onmicrosoft.com)"
+            }
+
+            if (-not $copilotContentSearchUpn) {
+                $copilotContentSearchUpn = $upn
+            }
+
+            if (-not $copilotContentSearchQuery) {
+                # Try a simpler Copilot search first. Copilot messages may be indexed under kind:im or a specific itemclass.
+                # Start with kind:im to test basic syntax, then refine if needed.
+                $copilotContentSearchQuery = 'kind:im'
+            }
+
+            $searchNamePrefix = if ($copilotContentSearchNamePrefix) { $copilotContentSearchNamePrefix } else { "CopilotPromptResponseSearch" }
+            $searchName = "{0}-{1}" -f $searchNamePrefix, (Get-Date -Format "yyyyMMdd-HHmmss")
+            $contentSearchOutputDirectory = if ($copilotContentSearchOutputDirectory) { $copilotContentSearchOutputDirectory } else { $outputDirectory }
+
+            if (-not (Test-Path $contentSearchOutputDirectory)) {
+                New-Item -Path $contentSearchOutputDirectory -ItemType Directory -Force | Out-Null
+            }
+
+            $contentSearchResult = New-ContentSearch -SearchName $searchName `
+                -Query $copilotContentSearchQuery `
+                -Mailbox $copilotContentSearchMailbox `
+                -UserPrincipalName $copilotContentSearchUpn
+
+            if (-not $contentSearchResult -or -not $contentSearchResult.Success) {
+                Write-Host "Content search failed. Skipping export details retrieval." -ForegroundColor Red
+                if ($contentSearchResult -and $contentSearchResult.ErrorMessage) {
+                    Write-Host $contentSearchResult.ErrorMessage -ForegroundColor Yellow
+                }
+                continue
+            }
+
+            Write-Host "Content search completed successfully. Search name: $searchName" -ForegroundColor Green
         }
         "Download Azure Blob Files" { 
             
@@ -344,6 +403,11 @@ do {
             Import-DotEnv
             $tenantId = $env:TENANT_ID
             $upn = $env:UPN
+            $copilotContentSearchMailbox = $env:COPILOT_CONTENT_SEARCH_MAILBOX
+            $copilotContentSearchUpn = $env:COPILOT_CONTENT_SEARCH_UPN
+            $copilotContentSearchQuery = $env:COPILOT_CONTENT_SEARCH_QUERY
+            $copilotContentSearchNamePrefix = $env:COPILOT_CONTENT_SEARCH_NAME_PREFIX
+            $copilotContentSearchOutputDirectory = $env:COPILOT_CONTENT_SEARCH_OUTPUT_DIRECTORY
             $storageAccountName = $env:STORAGE_ACCOUNT_NAME
             $resourceGroupName = $env:RESOURCE_GROUP_NAME
             $containerName = $env:CONTAINER_NAME

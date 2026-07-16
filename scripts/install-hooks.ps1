@@ -2,8 +2,13 @@
 # Copies the pre-commit hook into .git/hooks/ and sets it executable.
 # Re-run this after cloning or if the hook ever needs to be reinstalled.
 
+<<<<<<<< HEAD:scripts/git/install-hooks.ps1
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$source   = Join-Path $repoRoot "pre-commit"
+========
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $source   = Join-Path $repoRoot ".githooks\pre-commit"
+>>>>>>>> 1f8fa8f4ad29e6a5071354bdc86176d820854b7e:scripts/install-hooks.ps1
 $dest     = Join-Path $repoRoot ".git\hooks\pre-commit"
 
 Copy-Item -Path $source -Destination $dest -Force
