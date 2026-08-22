@@ -958,6 +958,27 @@ Get-ConversationTranscriptsViaAPI -ClientId $clientId `
     | Export-Csv -Path "C:\temp\conversation-transcripts.csv" -NoTypeInformation
 ```
 
+### [Get-CopilotAgentConsumption.ps1](Power-Platform/Get-CopilotAgentConsumption.ps1)
+
+Exports agent-level Copilot Credit consumption from the documented Power Platform Licensing API. Reports each agent's resource ID, environment, billed and non-billed consumption, and available metadata. Handles continuation-token paging automatically and writes to `C:\temp\CopilotAgentConsumption.csv` by default.
+
+#### Get-CopilotAgentConsumption.ps1 Example
+
+```PowerShell
+$token = (Get-AzAccessToken -ResourceUrl 'https://api.powerplatform.com').Token
+
+. .\Power-Platform\Get-CopilotAgentConsumption.ps1
+
+# Export month-to-date consumption using the MCSMessages entitlement
+Get-CopilotAgentConsumption -AccessToken $token
+
+# Export a specific date range
+Get-CopilotAgentConsumption -AccessToken $token `
+    -StartDate '2026-08-01' `
+    -EndDate '2026-08-31' `
+    -OutputPath 'C:\temp\CopilotAgentConsumption-August.csv'
+```
+
 ### [Get-CopilotAgentsViaAPI.ps1](Power-Platform/Get-CopilotAgentsViaAPI.ps1)
 
 Retrieves Copilot agents information via Power Platform APIs.
@@ -1035,6 +1056,26 @@ $tenantDomain = "<your tenant domain>.onmicrosoft.com"
 .\Power-Platform\Get-PowerPlatTenantSettingsViaAPI.ps1 -ClientId $clientId -ClientSecret $clientSecret -TenantDomain $tenantDomain
 ```
 
+### [Get-CopilotUserConsumption.ps1](Power-Platform/Get-CopilotUserConsumption.ps1)
+
+Exports user-level Copilot Credit consumption from the documented Power Platform Licensing API. Can report all users or users associated with one agent resource ID. Handles continuation-token paging automatically and writes to `C:\temp\CopilotUserConsumption.csv` by default. The API returns Microsoft Entra user IDs rather than display names.
+
+#### Get-CopilotUserConsumption.ps1 Example
+
+```PowerShell
+$token = (Get-AzAccessToken -ResourceUrl 'https://api.powerplatform.com').Token
+
+. .\Power-Platform\Get-CopilotUserConsumption.ps1
+
+# Export month-to-date consumption for all users
+Get-CopilotUserConsumption -AccessToken $token
+
+# Export users associated with a specific agent
+Get-CopilotUserConsumption -AccessToken $token `
+    -ResourceId '75c78857-1995-f111-8075-000d3a5b6097' `
+    -OutputPath 'C:\temp\CopilotUserConsumption-ByAgent.csv'
+```
+
 ### [Get-UsersViaAPI.ps1](Power-Platform/Get-UsersViaAPI.ps1)
 
 Retrieves users from a Power Platform environment via API.
@@ -1051,6 +1092,29 @@ $tenantDomain = "<your tenant domain>.onmicrosoft.com"
 # Run the script
 .\Power-Platform\Get-UsersViaAPI.ps1 -ClientId $clientId -ClientSecret $clientSecret -OrgUrl $orgUrl -TenantDomain $tenantDomain
 ```
+
+### [Set-CopilotAgentAccess.ps1](Power-Platform/Set-CopilotAgentAccess.ps1)
+
+Grants, updates, or revokes Chat and Coauthor access to Copilot Studio agents from a CSV file using documented Dataverse sharing APIs. Supports users, Microsoft Entra-backed teams, and organization-wide chat access. Repeated grants are idempotent, `-WhatIf` performs a live read-only validation, and results are written to `C:\temp\CopilotAgentAccessResults.csv` by default.
+
+Microsoft doesn't currently expose a supported public assignment API for the Copilot Studio Analytics Viewer or Evaluation Viewer roles. Rows requesting either role are reported as `Unsupported` without changing access. Coauthors must already have the Environment Maker security role in the target environment.
+
+#### Set-CopilotAgentAccess.ps1 Example
+
+```PowerShell
+# Create a working CSV from the template
+Copy-Item .\Power-Platform\copilot-agent-access.example.csv C:\temp\CopilotAgentAccess.csv
+
+. .\Power-Platform\Set-CopilotAgentAccess.ps1
+
+# Validate every row without changing access
+Set-CopilotAgentAccess -CsvPath C:\temp\CopilotAgentAccess.csv -WhatIf
+
+# Apply the supported access changes using the current Az context
+Set-CopilotAgentAccess -CsvPath C:\temp\CopilotAgentAccess.csv
+```
+
+CSV columns are `EnvironmentUrl`, `AgentId`, `PrincipalType`, `Principal`, `AccessRole`, and `Action`. Use `User`, `Team`, or `Organization` for `PrincipalType`; `Chat` or `Coauthor` for supported roles; and `Grant` or `Revoke` for the action. A team principal is its Microsoft Entra security group object ID.
 
 ### [Set-NewPowerAppOwner.ps1](Power-Platform/Set-NewPowerAppOwner.ps1)
 

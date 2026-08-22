@@ -1,0 +1,5 @@
+EnvironmentUrl,AgentId,PrincipalType,Principal,AccessRole,Action
+https://contoso.crm.dynamics.com,00000000-0000-0000-0000-000000000001,User,user@contoso.com,Chat,Grant
+https://contoso.crm.dynamics.com,00000000-0000-0000-0000-000000000001,User,user@contoso.com,Coauthor,Grant
+https://contoso.crm.dynamics.com,00000000-0000-0000-0000-000000000001,Team,00000000-0000-0000-0000-000000000002,Chat,Grant
+https://contoso.crm.dynamics.com,00000000-0000-0000-0000-000000000001,Organization,,Chat,Revoke
