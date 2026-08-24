@@ -168,6 +168,30 @@ Get-AzureCostReportsByResourceGroups -SubscriptionId "your-subscription-id" `
     -OutputDirectory "C:\temp\CostReports"
 ```
 
+### [Set-AzureCostManagementExport.ps1](Azure/Set-AzureCostManagementExport.ps1)
+
+Creates or reuses a StorageV2 account and configures an idempotent subscription-level Azure Cost Management export. The script automatically registers `Microsoft.CostManagementExports`, waits for registration to finish, and assigns the export's managed identity access to the destination container.
+
+Exports are written as partitioned, Gzip-compressed CSV files under `<container>/<root folder>/<export name>`. Daily schedules export month-to-date actual costs; monthly schedules export the previous month's actual costs. Existing exports are updated using their ETag.
+
+Requires the `Az.Accounts`, `Az.Resources`, and `Az.Storage` modules. New storage accounts enforce HTTPS, TLS 1.2, and disabled public Blob access. Use `-WhatIf` to preview changes and `-RunNow` to queue an immediate export after configuration.
+
+```PowerShell
+# Preview the resources and export configuration
+.\Azure\Set-AzureCostManagementExport.ps1 `
+    -SubscriptionId faf3e411-9c6e-4f10-b12b-a1f2f725ac39 `
+    -ResourceGroupName rg-sharedservices `
+    -Location eastus `
+    -WhatIf
+
+# Configure a daily month-to-date export and queue the first run
+.\Azure\Set-AzureCostManagementExport.ps1 `
+    -SubscriptionId faf3e411-9c6e-4f10-b12b-a1f2f725ac39 `
+    -ResourceGroupName rg-sharedservices `
+    -Location eastus `
+    -RunNow
+```
+
 ### [Get-EntraGroupMembers.ps1](Azure/Get-EntraGroupMembers.ps1)
 
 Retrieves members of an Entra ID (Azure AD) group by name or email. Displays users, groups, and service principals with categorized output.
@@ -977,6 +1001,37 @@ Get-CopilotAgentConsumption -AccessToken $token `
     -StartDate '2026-08-01' `
     -EndDate '2026-08-31' `
     -OutputPath 'C:\temp\CopilotAgentConsumption-August.csv'
+```
+
+### [Set-CopilotAgentConsumptionLimit.ps1](Power-Platform/Set-CopilotAgentConsumptionLimit.ps1)
+
+Sets an individual Copilot Studio agent's monthly Copilot Credit limit through the documented Power Platform Licensing API. The command can notify administrators near the limit, enforce a hard stop at the limit, or explicitly disable the agent. It reads the current threshold before changing it and supports `-WhatIf`.
+
+The access token must target `https://api.powerplatform.com`. The caller must have permission to manage Power Platform licensing allocations, such as the Power Platform Administrator role or equivalent API authorization.
+
+#### Set-CopilotAgentConsumptionLimit.ps1 Example
+
+```PowerShell
+$token = (Get-AzAccessToken -ResourceUrl 'https://api.powerplatform.com').Token
+
+. .\Power-Platform\Set-CopilotAgentConsumptionLimit.ps1
+
+# Preview the change without updating the agent
+Set-CopilotAgentConsumptionLimit -AccessToken $token `
+    -EnvironmentId '<environment-guid>' `
+    -AgentId '<agent-guid>' `
+    -MonthlyLimit 25000 `
+    -HardStopEnabled $true `
+    -WhatIf
+
+# Apply an 80% notification threshold and hard stop at 25,000 credits
+Set-CopilotAgentConsumptionLimit -AccessToken $token `
+    -EnvironmentId '<environment-guid>' `
+    -AgentId '<agent-guid>' `
+    -MonthlyLimit 25000 `
+    -NotificationsEnabled $true `
+    -NotificationThreshold 80 `
+    -HardStopEnabled $true
 ```
 
 ### [Get-CopilotAgentsViaAPI.ps1](Power-Platform/Get-CopilotAgentsViaAPI.ps1)
