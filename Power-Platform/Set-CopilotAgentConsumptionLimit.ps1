@@ -113,7 +113,8 @@ function Set-CopilotAgentConsumptionLimit {
             if ($Body) {
                 $parameters.Body = $Body
             }
-            Invoke-RestMethod @parameters -WhatIf:$false
+            $WhatIfPreference = $false
+            Invoke-RestMethod @parameters
         }
         catch {
             $statusCode = $_.Exception.Response.StatusCode.value__
