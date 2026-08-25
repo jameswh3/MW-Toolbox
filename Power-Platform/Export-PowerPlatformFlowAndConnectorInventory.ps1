@@ -159,8 +159,6 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 			CreatorObjectId           = $properties.creator.objectId
 			OwningUserObjectId        = $properties.owningUser.azureActiveDirectoryObjectId
 			WorkflowEntityId          = $flow.WorkflowEntityId
-			TriggerTypes              = @($properties.definitionSummary.triggers.type | Sort-Object -Unique) -join '; '
-			ActionTypes               = @($properties.definitionSummary.actions.type | Sort-Object -Unique) -join '; '
 			ConnectionReferenceCount  = $referenceCount
 			RoleAssignmentCount       = $flowRoles.Count
 			AssignedRoles             = @($flowRoles.RoleType | Sort-Object -Unique) -join '; '
@@ -343,7 +341,7 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 	Export-InventoryCsv -Rows $flowRows -Columns @(
 		'EnvironmentName', 'FlowName', 'DisplayName', 'Enabled', 'State', 'SuspensionReason',
 		'IsManaged', 'ComponentState', 'CreatedTime', 'LastModifiedTime', 'CreatorObjectId',
-		'OwningUserObjectId', 'WorkflowEntityId', 'TriggerTypes', 'ActionTypes',
+		'OwningUserObjectId', 'WorkflowEntityId',
 		'ConnectionReferenceCount', 'RoleAssignmentCount', 'AssignedRoles', 'AssignedPrincipalObjectIds'
 	) -Path $flowPath
 	Export-InventoryCsv -Rows $connectorRows -Columns @(
