@@ -61,13 +61,6 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 	$connectionRoleAssignmentsByName = @{}
 	foreach ($connection in $connections) {
 		$connectionsByName[$connection.ConnectionName] = $connection
-		$connectionRoleAssignmentsByName[$connection.ConnectionName] = @(
-			Get-AdminPowerAppConnectionRoleAssignment `
-				-EnvironmentName $EnvironmentName `
-				-ConnectorName $connection.ConnectorName `
-				-ConnectionName $connection.ConnectionName `
-				-ErrorAction Stop
-		)
 	}
 
 	$flows = if ($FlowName) {
@@ -210,6 +203,15 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 			$connectionFound = -not [string]::IsNullOrWhiteSpace($reference.connectionName) -and
 				$connectionsByName.ContainsKey($reference.connectionName)
 			$connection = if ($connectionFound) { $connectionsByName[$reference.connectionName] } else { $null }
+			if ($connectionFound -and -not $connectionRoleAssignmentsByName.ContainsKey($reference.connectionName)) {
+				$connectionRoleAssignmentsByName[$reference.connectionName] = @(
+					Get-AdminPowerAppConnectionRoleAssignment `
+						-EnvironmentName $EnvironmentName `
+						-ConnectorName $connection.ConnectorName `
+						-ConnectionName $connection.ConnectionName `
+						-ErrorAction Stop
+				)
+			}
 			$connectionAssignments = if ($connectionFound) {
 				@($connectionRoleAssignmentsByName[$reference.connectionName])
 			}
@@ -305,6 +307,15 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 				$connectionFound = -not [string]::IsNullOrWhiteSpace($connectionName) -and
 					$connectionsByName.ContainsKey($connectionName)
 				$connection = if ($connectionFound) { $connectionsByName[$connectionName] } else { $null }
+				if ($connectionFound -and -not $connectionRoleAssignmentsByName.ContainsKey($connectionName)) {
+					$connectionRoleAssignmentsByName[$connectionName] = @(
+						Get-AdminPowerAppConnectionRoleAssignment `
+							-EnvironmentName $EnvironmentName `
+							-ConnectorName $connection.ConnectorName `
+							-ConnectionName $connection.ConnectionName `
+							-ErrorAction Stop
+					)
+				}
 				$connectionAssignments = if ($connectionFound) {
 					@($connectionRoleAssignmentsByName[$connectionName])
 				}
