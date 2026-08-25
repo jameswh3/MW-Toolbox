@@ -58,8 +58,16 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 
 	$connections = @(Get-AdminPowerAppConnection -EnvironmentName $EnvironmentName -ErrorAction Stop)
 	$connectionsByName = @{}
+	$connectionRoleAssignmentsByName = @{}
 	foreach ($connection in $connections) {
 		$connectionsByName[$connection.ConnectionName] = $connection
+		$connectionRoleAssignmentsByName[$connection.ConnectionName] = @(
+			Get-AdminPowerAppConnectionRoleAssignment `
+				-EnvironmentName $EnvironmentName `
+				-ConnectorName $connection.ConnectorName `
+				-ConnectionName $connection.ConnectionName `
+				-ErrorAction Stop
+		)
 	}
 
 	$flows = if ($FlowName) {
@@ -202,6 +210,12 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 			$connectionFound = -not [string]::IsNullOrWhiteSpace($reference.connectionName) -and
 				$connectionsByName.ContainsKey($reference.connectionName)
 			$connection = if ($connectionFound) { $connectionsByName[$reference.connectionName] } else { $null }
+			$connectionAssignments = if ($connectionFound) {
+				@($connectionRoleAssignmentsByName[$reference.connectionName])
+			}
+			else {
+				@()
+			}
 			$connectionStatus = @($connection.Statuses | ForEach-Object { $_.status }) -join '; '
 
 			$referenceRows += [pscustomobject]@{
@@ -217,6 +231,10 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 				ConnectionFound              = $connectionFound
 				ConnectionStatus             = $connectionStatus
 				ConnectionOwnerObjectId       = $connection.CreatedBy.id
+				ConnectionRoleAssignmentCount = $connectionAssignments.Count
+				ConnectionAssignedRoles       = @($connectionAssignments.RoleType | Sort-Object -Unique) -join '; '
+				ConnectionAssignedPrincipalObjectIds = @($connectionAssignments.PrincipalObjectId | Sort-Object -Unique) -join '; '
+				ConnectionAssignedPrincipalTypes = @($connectionAssignments.PrincipalType | Sort-Object -Unique) -join '; '
 				ConnectorName                = $connectorName
 				ConnectorDisplayName         = $reference.displayName
 				ConnectorId                  = $reference.id
@@ -287,6 +305,12 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 				$connectionFound = -not [string]::IsNullOrWhiteSpace($connectionName) -and
 					$connectionsByName.ContainsKey($connectionName)
 				$connection = if ($connectionFound) { $connectionsByName[$connectionName] } else { $null }
+				$connectionAssignments = if ($connectionFound) {
+					@($connectionRoleAssignmentsByName[$connectionName])
+				}
+				else {
+					@()
+				}
 				$connectionStatus = @($connection.Statuses | ForEach-Object { $_.status }) -join '; '
 
 				$referenceRows += [pscustomobject]@{
@@ -302,6 +326,10 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 					ConnectionFound              = $connectionFound
 					ConnectionStatus             = $connectionStatus
 					ConnectionOwnerObjectId       = $connection.CreatedBy.id
+					ConnectionRoleAssignmentCount = $connectionAssignments.Count
+					ConnectionAssignedRoles       = @($connectionAssignments.RoleType | Sort-Object -Unique) -join '; '
+					ConnectionAssignedPrincipalObjectIds = @($connectionAssignments.PrincipalObjectId | Sort-Object -Unique) -join '; '
+					ConnectionAssignedPrincipalTypes = @($connectionAssignments.PrincipalType | Sort-Object -Unique) -join '; '
 					ConnectorName                = $connectorName
 					ConnectorDisplayName         = $reference.displayName
 					ConnectorId                  = $connectorId
@@ -355,6 +383,8 @@ function Export-PowerPlatformFlowAndConnectorInventory {
 		'EnvironmentName', 'ResourceType', 'ResourceName', 'ResourceDisplayName',
 		'FlowName', 'FlowDisplayName', 'ReferenceKey', 'RuntimeSource',
 		'ConnectionName', 'ConnectionFound', 'ConnectionStatus', 'ConnectionOwnerObjectId',
+		'ConnectionRoleAssignmentCount', 'ConnectionAssignedRoles',
+		'ConnectionAssignedPrincipalObjectIds', 'ConnectionAssignedPrincipalTypes',
 		'ConnectorName', 'ConnectorDisplayName', 'ConnectorId', 'ConnectorTier',
 		'IsCustomConnector', 'CustomConnectorFound', 'ConnectorRoleAssignmentCount'
 	) -Path $referencePath
