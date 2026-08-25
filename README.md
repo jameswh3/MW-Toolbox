@@ -1062,6 +1062,22 @@ Retrieves a comprehensive list of all Copilot agents and their components from a
 .\Power-Platform\Get-CopilotsAndComponentsFromAllEnvironments.ps1 | Export-Csv -Path "C:\temp\AllCopilotsAndComponents.csv" -NoTypeInformation
 ```
 
+### [Export-PowerPlatformFlowAndConnectorInventory.ps1](Power-Platform/Export-PowerPlatformFlowAndConnectorInventory.ps1)
+
+Exports troubleshooting inventory for flows, custom connectors, and the connections referenced by flows and Power Apps in one environment. The environment-specific output folder contains `flows.csv`, `custom-connectors.csv`, `connection-references.csv`, and `issues.csv`.
+
+The reports include role assignments for flows, custom connectors, and referenced connections. Connection sharing records include assigned roles plus principal object IDs and types, including user or group assignments returned by Power Platform. Power App sharing assignments are not collected. Requires the `Microsoft.PowerApps.Administration.PowerShell` module and an authenticated administrator session.
+
+#### Export-PowerPlatformFlowAndConnectorInventory.ps1 Example
+
+```PowerShell
+# Load the function and export one environment
+. .\Power-Platform\Export-PowerPlatformFlowAndConnectorInventory.ps1
+Export-PowerPlatformFlowAndConnectorInventory `
+    -EnvironmentName "00000000-0000-0000-0000-000000000000" `
+    -OutputDirectory "C:\temp"
+```
+
 ### [Get-PowerAppsAndConnections.ps1](Power-Platform/Get-PowerAppsAndConnections.ps1)
 
 Retrieves all Power Apps and their connections within the tenant.
