@@ -1,15 +1,16 @@
 # Configuration Variables used by multiple scripts
-$workingDirectory = (Get-Location).Path
+$workingDirectory = $PSScriptRoot
+$dotEnvPath = Join-Path $workingDirectory ".env"
 $startDate = (Get-Date).AddDays(-10).ToString("yyyy-MM-dd")
 $endDate = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
 $outputDirectory = "c:\temp"
 
 # Import the Import-DotEnv function
-. (Join-Path $workingDirectory "scripts\bootstrap\Import-DotEnv.ps1")
+. (Join-Path $workingDirectory "Shared\Import-DotEnv.ps1")
 
 # Load .env file if environment variables are not already set
 if (-not $env:UPN) {
-    Import-DotEnv
+    Import-DotEnv -Path $dotEnvPath
 }
 
 #multiple scripts
@@ -400,7 +401,7 @@ do {
             Start-Sleep -Seconds 2
         }
         "Reload Environment Variables" {
-            Import-DotEnv
+            Import-DotEnv -Path $dotEnvPath
             $tenantId = $env:TENANT_ID
             $upn = $env:UPN
             $copilotContentSearchMailbox = $env:COPILOT_CONTENT_SEARCH_MAILBOX
