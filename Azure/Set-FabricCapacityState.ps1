@@ -28,7 +28,14 @@
         }
 
         # Get current state of the Fabric capacity
-        $currentCapacity = Get-AzFabricCapacity -CapacityName $FabricName -ResourceGroupName $ResourceGroupName
+        try {
+            Import-Module Az.Fabric -ErrorAction Stop
+            $currentCapacity = Get-AzFabricCapacity -CapacityName $FabricName -ResourceGroupName $ResourceGroupName -ErrorAction Stop
+        }
+        catch {
+            throw "Unable to retrieve Fabric capacity '$FabricName' in resource group '$ResourceGroupName': $($_.Exception.Message)"
+        }
+
         $currentState = $currentCapacity.State
 
         Write-Host "Current Fabric capacity state: $currentState"
