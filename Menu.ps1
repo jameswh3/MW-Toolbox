@@ -98,6 +98,7 @@ $menuCategories = [ordered]@{
         "Download Azure Blob Files"
     )
     "System" = @(
+        "Toggle Windows Dark/Light Mode",
         "Sign Out of Azure",
         "Reload Environment Variables",
         "Exit"
@@ -399,6 +400,14 @@ do {
             }
 
             Start-Sleep -Seconds 2
+        }
+        "Toggle Windows Dark/Light Mode" {
+            try {
+                & "$workingDirectory\Misc\Switch-WindowsTheme.ps1" -ErrorAction Stop
+            }
+            catch {
+                Write-Host "Failed to toggle Windows theme: $($_.Exception.Message)" -ForegroundColor Red
+            }
         }
         "Reload Environment Variables" {
             Import-DotEnv -Path $dotEnvPath

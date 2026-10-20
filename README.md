@@ -584,6 +584,36 @@ Update-AADUserUPN -originalUpn "user@olddomain.com" `
 
 ## Misc
 
+### [Switch-WindowsTheme.ps1](Misc/Switch-WindowsTheme.ps1)
+
+Toggles Windows 11 dark/light mode for the current user, setting both the Windows
+and app themes. No administrator rights or environment variables are required.
+Run it directly or select **System > Toggle Windows Dark/Light Mode** in the menu.
+
+```powershell
+# Toggle based on the current app theme
+.\Misc\Switch-WindowsTheme.ps1
+
+# Set a specific mode
+.\Misc\Switch-WindowsTheme.ps1 -Mode Dark
+.\Misc\Switch-WindowsTheme.ps1 -Mode Light
+
+# Preview without changing settings
+.\Misc\Switch-WindowsTheme.ps1 -WhatIf
+```
+
+An unset app theme is treated as light; a mixed Windows/app theme is toggled based
+on the app theme and synchronized. The script notifies running apps without
+restarting Explorer. Some apps may need to be reopened, and apps with independent
+theme settings may not follow Windows. Contrast themes and organization policies
+may override the appearance.
+
+Run the isolated registry/notification tests with Pester:
+
+```powershell
+Invoke-Pester .\scripts\tests\Switch-WindowsTheme.Tests.ps1
+```
+
 ### [countdown_timer_video.py](Misc/countdown_timer_video.py)
 
 Generates a square MP4 countdown timer video with a dark background and centered mm:ss text. Supports duration input in seconds, mm:ss, or hh:mm:ss. These can be added to PowerPoint slides to provide a countdown timer on a slide.
