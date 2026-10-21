@@ -1,12 +1,23 @@
 # Configuration Variables used by multiple scripts
-$workingDirectory = $PSScriptRoot
+$workingDirectory = if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+    $PSScriptRoot
+}
+else {
+    (Get-Location).Path
+}
+
+$importDotEnvPath = Join-Path $workingDirectory "Shared\Import-DotEnv.ps1"
+if (-not (Test-Path -LiteralPath $importDotEnvPath -PathType Leaf)) {
+    throw "Unable to locate the MW-Toolbox scripts from '$workingDirectory'. Run Menu.ps1 as a file, or set the PowerShell working directory to the MW-Toolbox folder before running the selection."
+}
+
 $dotEnvPath = Join-Path $workingDirectory ".env"
 $startDate = (Get-Date).AddDays(-10).ToString("yyyy-MM-dd")
 $endDate = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
 $outputDirectory = "c:\temp"
 
 # Import the Import-DotEnv function
-. (Join-Path $workingDirectory "Shared\Import-DotEnv.ps1")
+. $importDotEnvPath
 
 # Load .env file if environment variables are not already set
 if (-not $env:UPN) {

@@ -1064,6 +1064,32 @@ Set-CopilotAgentConsumptionLimit -AccessToken $token `
     -HardStopEnabled $true
 ```
 
+### [Set-CopilotEnvironmentCreditAllocation.ps1](Power-Platform/Set-CopilotEnvironmentCreditAllocation.ps1)
+
+Sets an environment's Copilot Credit allocation through the documented Power Platform Licensing API. It also controls **Draw from the available capacity in my tenant**. Tenant-capacity overage is disabled by default so the environment is capped at its allocation. The command supports `-WhatIf`.
+
+If an environment group policy governs tenant-pool consumption, Power Platform rejects environment-level changes with `TenantPoolLockedByPolicy`. Update the environment group rule or remove the environment from that group before retrying.
+
+#### Set-CopilotEnvironmentCreditAllocation.ps1 Example
+
+```PowerShell
+$token = (Get-AzAccessToken -ResourceUrl 'https://api.powerplatform.com').Token
+
+. .\Power-Platform\Set-CopilotEnvironmentCreditAllocation.ps1
+
+# Preview an allocation that prevents fallback to unallocated tenant capacity
+Set-CopilotEnvironmentCreditAllocation -AccessToken $token `
+    -EnvironmentId '<environment-guid>' `
+    -CreditAllocation 5000 `
+    -DrawFromTenantCapacity $false `
+    -WhatIf
+
+# Apply the allocation and cap the environment at 5,000 credits
+Set-CopilotEnvironmentCreditAllocation -AccessToken $token `
+    -EnvironmentId '<environment-guid>' `
+    -CreditAllocation 5000
+```
+
 ### [Get-CopilotAgentsViaAPI.ps1](Power-Platform/Get-CopilotAgentsViaAPI.ps1)
 
 Retrieves Copilot agents information via Power Platform APIs.
