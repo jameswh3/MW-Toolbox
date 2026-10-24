@@ -2,6 +2,11 @@
 
 A collection of scripts and files that I use as part of my role as a Copilot Solution Engineer.
 
+Scripts are intended to be downloaded and used individually wherever possible,
+without other repository files. Required PowerShell modules, authentication, and
+service permissions still apply. [Menu.ps1](Menu.ps1) is the exception: it
+orchestrates scripts from the repository and requires the repository layout.
+
 ## Environment Configuration
 
 ### Setting Up Your .env File
@@ -85,6 +90,113 @@ Central configuration file that sets up environment variables and common configu
 # Environment variables will be loaded from .env file if present
 # Variables include: UPN, TENANT_ID, STORAGE_ACCOUNT_NAME, etc.
 ```
+
+## Purview audit search migration
+
+The six Copilot, SharePoint agent, and Compliance audit retrieval scripts use the
+[Microsoft Graph v1.0 Audit Search API](https://learn.microsoft.com/graph/api/resources/security-auditlogquery?view=graph-rest-1.0),
+not Exchange Online audit search. Message Center announcement **MC1505599**
+([public mirror](https://mc.merill.net/message/MC1505599)) schedules
+`Search-UnifiedAuditLog` retirement for **October 15, 2027**.
+
+### Authentication and prerequisites
+
+```powershell
+Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
+Connect-MgGraph -Scopes 'AuditLogsQuery.Read.All' -ContextScope Process
+```
+
+Admin consent is required for `AuditLogsQuery.Read.All`; `AuditLog.Read.All`
+is a different permission and is not a substitute. Delegated users also need
+the applicable Purview audit access (Audit Reader/Audit Manager role groups).
+Auditing must be enabled and the requested data must still be within the
+tenant's licensed retention period. The API currently supports the Global
+cloud, not sovereign clouds.
+
+The scripts connect interactively if no Graph context exists. They reuse an
+existing context, including an app-only certificate or managed identity connection
+with consented application permissions. For SharePoint-only use, you can
+preconnect with `AuditLogsQuery-SharePoint.Read.All` instead of the tenant-wide
+permission. Do not use that narrower permission for full-tenant or Copilot searches.
+An existing context with insufficient permissions fails rather than silently
+reconnecting or returning an empty report.
+
+`UserPrincipalName` checks the expected
+signed-in account for delegated authentication; it is **not** an audited-user
+filter and does not select the account in the Graph sign-in window. Use
+`Disconnect-MgGraph` and reconnect to switch accounts.
+
+#### Authentication troubleshooting
+
+An authenticated Azure CLI (`az`) session does not automatically authenticate
+Microsoft Graph PowerShell. Its Graph token must include the audit-query
+permission to access this API; `AuditLog.Read.All` alone is insufficient.
+
+Do not use `az login --scope https://graph.microsoft.com/AuditLogsQuery.Read.All`
+for this workflow. During validation, Azure CLI's first-party application was
+not preauthorized for that scope and returned **AADSTS65002**. Use
+`Connect-MgGraph` as shown above instead; that Azure CLI error does not mean the
+audit scripts failed or that an additional user role will resolve the login.
+
+If interactive sign-in fails with **A window handle must be configured** in an
+embedded Windows terminal, explicitly connect using device-code authentication
+before running a script:
+
+```powershell
+Connect-MgGraph -Scopes 'AuditLogsQuery.Read.All' -UseDeviceCode -ContextScope Process
+```
+
+Open the URL printed by the command and enter its code. The audit scripts reuse
+that connection when run in the **same PowerShell process**.
+
+### Query behavior and compatibility
+
+Each of the six audit scripts defines one self-contained function with the
+same name as the file (without `.ps1`). Dot-source a downloaded script to load
+its command, then call that command with parameters. Loading a script does not
+connect, search, or export anything. Multiple audit commands can coexist in one
+session without shared helper functions or dependencies on other repository files:
+
+```powershell
+. .\Get-AuditLogResults.ps1
+. .\Get-CopilotInteractionAuditLogItems.ps1
+
+Get-AuditLogResults -StartDate '2026-10-01' -EndDate '2026-10-02'
+Get-CopilotInteractionAuditLogItems -StartDate '2026-10-01' -EndDate '2026-10-02'
+```
+
+Each function submits a `POST /v1.0/security/auditLog/queries`, polls status (every 10 seconds, for up to
+30 minutes), and follows every records page's `@odata.nextLink`. API errors,
+failed/cancelled/unknown statuses, timeouts, malformed records, and a reported
+record-count overflow stop retrieval before any report is exported. Graph SDK
+retry handling applies to transient HTTP failures; exhausted retries surface as
+errors. Every audit command exposes `TimeoutSeconds` and `PollIntervalSeconds`
+to control polling.
+
+The API supports up to **1 million records per query**. A successful status alone
+does not guarantee completeness: each command checks `isRecordCountLimitExceeded`.
+For an overflow, narrow the date range or filters and rerun; the scripts do not
+automatically resubmit/split searches and consume additional query allocations.
+Tenant limits include a baseline 200 submissions per rolling 24 hours and 50
+queued/running searches; HTTP 429 responses provide retry guidance. See
+[service limits](https://learn.microsoft.com/graph/throttling-limits#security-audit-log-query-service-limits).
+
+Use ISO 8601 dates, preferably with an explicit UTC offset (for example
+`2026-10-01T00:00:00Z`). Inputs are converted to UTC; dates without an offset use
+the local time zone. `StartDate` must be earlier than `EndDate`.
+
+Existing CSV column names, append behavior, bot-icon exclusion, and SharePoint
+`.agent` filtering are retained. The helper maps Graph record fields to the
+existing `CreationDate`, `Identity`, `UserIds`, `UserId`, `Operations`,
+`RecordType`, and JSON-string `AuditData` properties. `RecordType` contains the
+Graph record-type name. Copilot searches use documented operation names
+(`CopilotInteraction`, `BotCreate`, `BotUpdateOperation-BotShare`) rather than
+assuming Exchange record-type names are supported Graph enum values. Sharing
+searches now filter on the server, avoiding the old mixed-batch filtering bug.
+
+For continuous bulk ingestion instead of an on-demand investigation/report, use
+the [Office 365 Management Activity API](https://learn.microsoft.com/office/office-365-management-api/office-365-management-activity-api-reference).
+It is a subscription/content-feed API, not a drop-in historical search replacement.
 
 ## Repository Tooling
 
@@ -352,7 +464,11 @@ $upn = "admin@yourdomain.com"
 
 ### [Get-AuditLogResults.ps1](Compliance/Get-AuditLogResults.ps1)
 
-Searches the unified audit log and retrieves results for specified date ranges.
+Searches the unified audit log through Microsoft Graph and retrieves results for specified date ranges.
+Defaults to five days ago through tomorrow, excludes bot-icon updates, and exports
+to `C:\temp\audit.csv`. Pass `-OutputPath ''` to return objects instead, or
+`-ExcludeBotIconUpdates $false` to include icon updates. See
+[authentication and prerequisites](#authentication-and-prerequisites) before running.
 
 #### Get-AuditLogResults.ps1 Example
 
@@ -361,8 +477,12 @@ Searches the unified audit log and retrieves results for specified date ranges.
 $startDate = "2025-06-01"
 $endDate = "2025-06-24"
 
-# Run the script
-.\Compliance\Get-AuditLogResults.ps1
+# Load the function and run the search
+. .\Compliance\Get-AuditLogResults.ps1
+Get-AuditLogResults -StartDate $startDate -EndDate $endDate
+
+# Return objects without writing a CSV
+$results = @(Get-AuditLogResults -StartDate $startDate -EndDate $endDate -OutputPath '')
 ```
 
 ### [New-ContentSearch.ps1](Compliance/New-ContentSearch.ps1)
@@ -405,7 +525,11 @@ Set-PurviewSensitivityLabel -FolderPath "C:\Data" `
 
 ### [Get-CopilotCreationAuditLogItems.ps1](Copilot/Get-CopilotCreationAuditLogItems.ps1)
 
-Retrieves audit log entries for Copilot bot creation events.
+Retrieves Copilot Studio `BotCreate` events through Graph and exports event date,
+user ID, and environment ID to `C:\temp\copilotaudit.csv` by default. Dot-source
+the script, then call its matching function with explicit parameters.
+Use `-OutputFile` to change the destination; the output directory must already
+exist. Dates default to the last 14 days.
 
 #### Get-CopilotCreationAuditLogItems.ps1 Example
 
@@ -415,20 +539,25 @@ $upn = "admin@yourdomain.com"
 $startDate = "2025-06-01"
 $endDate = "2025-06-24"
 
-# Run the script
-.\Copilot\Get-CopilotCreationAuditLogItems.ps1
+# Load the function, then run it
+. .\Copilot\Get-CopilotCreationAuditLogItems.ps1
+Get-CopilotCreationAuditLogItems -StartDate $startDate -EndDate $endDate `
+    -UserPrincipalName $upn -OutputFile 'C:\temp\copilotcreationaudit.csv'
 ```
 
 ### [Get-CopilotInteractionAuditLogItems.ps1](Copilot/Get-CopilotInteractionAuditLogItems.ps1)
 
-Retrieves audit log entries for Copilot interaction events.
+Retrieves `CopilotInteraction` events through Graph, including agent, plugin,
+message-count, and accessed-resource details. Dot-source the function before
+calling it; `-Append` retains the existing CSV upgrade/append behavior.
 
 #### Get-CopilotInteractionAuditLogItems.ps1 Example
 
 ```PowerShell
 
-# Run the script with parameters
-.\Copilot\Get-CopilotInteractionAuditLogItems.ps1 -StartDate '2025-06-01' `
+# Load the function, then run it with parameters
+. .\Copilot\Get-CopilotInteractionAuditLogItems.ps1
+Get-CopilotInteractionAuditLogItems -StartDate '2025-06-01' `
     -EndDate '2025-06-30' `
     -UserPrincipalName 'admin@yourdomain.com' `
     -OutputFile 'c:\temp\copilotinteractionauditlog.csv' `
@@ -496,7 +625,9 @@ Grant `CopilotPackages.ReadWrite.All` delegated permission (with admin consent) 
 
 ### [Get-CopilotSharingAuditLogItems.ps1](Copilot/Get-CopilotSharingAuditLogItems.ps1)
 
-Retrieves audit log entries for Copilot sharing events and activities.
+Retrieves Copilot Studio sharing events through Graph using the server-side
+`BotUpdateOperation-BotShare` operation filter. Dot-source the function before
+calling it; `-Append` adds rows to an existing CSV.
 
 #### Get-CopilotSharingAuditLogItems.ps1 Example
 
@@ -506,8 +637,9 @@ $upn = "admin@yourdomain.com"
 $startDate = "2025-06-01"
 $endDate = "2025-06-24"
 
-# Run the script
-.\Copilot\Get-CopilotSharingAuditLogItems.ps1 -StartDate $startDate `
+# Load the function, then run it
+. .\Copilot\Get-CopilotSharingAuditLogItems.ps1
+Get-CopilotSharingAuditLogItems -StartDate $startDate `
     -EndDate $endDate `
     -UserPrincipalName $upn `
     -OutputFile 'c:\temp\copilotsharingauditlog.csv'
@@ -1449,7 +1581,10 @@ Retrieves Microsoft Graph delta query results for tracking changes in SharePoint
 
 ### [Get-SharePointAgentCreationAuditLogItems.ps1](SharePoint-Online/Get-SharePointAgentCreationAuditLogItems.ps1)
 
-Retrieves audit log entries for SharePoint agent creation events.
+Queries Graph for `sharePointFileOperation` records with operation `FileUploaded`,
+then returns records whose JSON audit payload matches `.agent`. Dot-source the
+script, then call its matching function and capture the returned objects.
+Dates default to the last seven days.
 
 #### Get-SharePointAgentCreationAuditLogItems.ps1 Example
 
@@ -1459,13 +1594,18 @@ $upn = "admin@yourdomain.com"
 $startDate = "2025-06-01"
 $endDate = "2025-06-24"
 
-# Run the script
-.\SharePoint-Online\Get-SharePointAgentCreationAuditLogItems.ps1
+# Load the function, then capture its results
+. .\SharePoint-Online\Get-SharePointAgentCreationAuditLogItems.ps1
+$copilotAgentCreationAuditLogItems = @(Get-SharePointAgentCreationAuditLogItems `
+    -StartDate $startDate -EndDate $endDate -UserPrincipalName $upn)
 ```
 
 ### [Get-SharePointAgentInteractionAuditLogItems.ps1](SharePoint-Online/Get-SharePointAgentInteractionAuditLogItems.ps1)
 
-Retrieves audit log entries for SharePoint agent interaction events.
+Queries Graph for `sharePointFileOperation` records with operations `FileAccessed`
+and `FileAccessedExtended`, then retains records whose JSON audit payload matches
+`.agent`. Dot-source the script, then call its matching function and capture the
+returned objects. Dates default to the last seven days.
 
 #### Get-SharePointAgentInteractionAuditLogItems.ps1 Example
 
@@ -1475,8 +1615,10 @@ $upn = "admin@yourdomain.com"
 $startDate = "2025-06-01"
 $endDate = "2025-06-24"
 
-# Run the script
-.\SharePoint-Online\Get-SharePointAgentInteractionAuditLogItems.ps1
+# Load the function, then capture its results
+. .\SharePoint-Online\Get-SharePointAgentInteractionAuditLogItems.ps1
+$copilotAgentInteractionAuditLogItems = @(Get-SharePointAgentInteractionAuditLogItems `
+    -StartDate $startDate -EndDate $endDate -UserPrincipalName $upn)
 ```
 
 ### [Get-SharePointFileProperties.ps1](SharePoint-Online/Get-SharePointFileProperties.ps1)
